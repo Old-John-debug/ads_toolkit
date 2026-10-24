@@ -1,0 +1,52 @@
+版本 = 1
+
+[工程]
+工作区 = ../../../3_project/MyWorkspace_wrk
+库 = MyLibrary_lib
+单元 = rectB
+
+[变量]
+pwr = 3
+
+[器件]
+P1 | ads_sources | P_1Tone | (-8, 0) | 0 | Z=50 Ohm; P=polar(dbmtow(pwr),0); Freq=0.92 GHz
+GND_S | ads_rflib | GROUND | (-8.75, -0.75) | 0 | 
+I_Probe1 | ads_rflib | I_Probe | (-6.5, 0) | 180 | 
+V_IN | ads_rflib | V_Probe | (-6, -0.75) | 0 | 
+L1 | ads_rflib | L | (-5, 0) | 270 | L=8.2 nH
+L2 | ads_rflib | L | (-4, 0) | 0 | L=22 nH
+C1 | ads_rflib | C | (-2.5, 0) | 270 | C=0.5 pF
+D1 | HFDiode | di_hp_HSMS2850_20000301 | (-1.5, 0) | 90 | 
+C2 | ads_rflib | C | (0.5, 0) | 270 | C=220 pF
+R1 | ads_rflib | R | (1.5, 0) | 270 | R=2 kOhm
+V_OUT | ads_rflib | V_Probe | (-0.5, 0.75) | 0 | 
+GND_BUS | ads_rflib | GROUND | (-5.75, -1.5) | 0 | 
+HB1 | ads_simulation | HarmonicBalance | (-8, -4) | 0 | Freq=0.92 GHz; Order=12; MaxOrder=12
+Sweep1 | ads_simulation | ParamSweep | (-4.5, -4) | 0 | SweepVar=pwr; Start=-20; Stop=15; Step=1; SimInstanceName=HB1
+VAR1 | ads_datacmps | VAR | (-1, -4) | 0 | 
+
+[网络]
+gnd = P1.P__0, GND_S.P__0, GND_BUS.P__0, L1.P__1, C1.P__0, C2.P__0, R1.P__0
+nsrc = P1.P__1, I_Probe1.P__1
+nA = I_Probe1.P__0, V_IN.P__0, L1.P__0, L2.P__0
+nB = L2.P__1, C1.P__1, D1.P__1
+nC = D1.P__0, D1.P__2, C2.P__1, R1.P__1, V_OUT.P__0
+
+[连线]
+gnd = (-8, 0) -> (-8.75, 0) -> (-8.75, -0.75)
+gnd = (-5.75, -1.5) -> (1.5, -1.5)
+gnd = (-5, -1) -> (-5, -1.5)
+gnd = (-2.5, -1) -> (-2.5, -1.5)
+gnd = (0.5, -1) -> (0.5, -1.5)
+gnd = (1.5, -1) -> (1.5, -1.5)
+nsrc = (-7, 0) -> (-6.75, 0)
+nA = (-6.5, 0) -> (-4, 0)
+nA = (-6, 0) -> (-6, -0.75)
+nB = (-3, 0) -> (-1.5, 0)
+nC = (-0.5, 0) -> (1.5, 0)
+nC = (-0.5, 0) -> (-0.5, 0.75)
+nC = (-1, -0.5) -> (-0.5, -0.5) -> (-0.5, 0)
+
+[选项]
+tahb_off = true
+var_part = VAR1

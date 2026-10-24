@@ -1,0 +1,990 @@
+{
+ "design": {
+  "workspace": "../../../2_project/MyWorkspace_wrk",
+  "library": "MyLibrary_lib",
+  "cell": "rectA"
+ },
+ "parts": [
+  {
+   "name": "C1",
+   "lib": "ads_rflib",
+   "cell": "C",
+   "origin": [
+    -4.5,
+    2.0
+   ],
+   "angle": 0,
+   "params": {
+    "C": "100 pF",
+    "Temp": "",
+    "Trise": "",
+    "Tnom": "",
+    "TC1": "",
+    "TC2": "",
+    "wBV": "",
+    "InitCond": "",
+    "Model": "",
+    "Width": "",
+    "Length": "",
+    "_M": ""
+   }
+  },
+  {
+   "name": "C2",
+   "lib": "ads_rflib",
+   "cell": "C",
+   "origin": [
+    -4.5,
+    -2.0
+   ],
+   "angle": 0,
+   "params": {
+    "C": "100 pF",
+    "Temp": "",
+    "Trise": "",
+    "Tnom": "",
+    "TC1": "",
+    "TC2": "",
+    "wBV": "",
+    "InitCond": "",
+    "Model": "",
+    "Width": "",
+    "Length": "",
+    "_M": ""
+   }
+  },
+  {
+   "name": "C3",
+   "lib": "ads_rflib",
+   "cell": "C",
+   "origin": [
+    2.0,
+    2.0
+   ],
+   "angle": 90,
+   "params": {
+    "C": "100 pF",
+    "Temp": "",
+    "Trise": "",
+    "Tnom": "",
+    "TC1": "",
+    "TC2": "",
+    "wBV": "",
+    "InitCond": "",
+    "Model": "",
+    "Width": "",
+    "Length": "",
+    "_M": ""
+   }
+  },
+  {
+   "name": "C4",
+   "lib": "ads_rflib",
+   "cell": "C",
+   "origin": [
+    2.0,
+    -2.0
+   ],
+   "angle": 270,
+   "params": {
+    "C": "100 pF",
+    "Temp": "",
+    "Trise": "",
+    "Tnom": "",
+    "TC1": "",
+    "TC2": "",
+    "wBV": "",
+    "InitCond": "",
+    "Model": "",
+    "Width": "",
+    "Length": "",
+    "_M": ""
+   }
+  },
+  {
+   "name": "D1",
+   "lib": "HFDiode",
+   "cell": "di_hp_HSMS282B_20000301",
+   "origin": [
+    -2.5,
+    3.0
+   ],
+   "angle": 0
+  },
+  {
+   "name": "D2",
+   "lib": "HFDiode",
+   "cell": "di_hp_HSMS282B_20000301",
+   "origin": [
+    -2.5,
+    -2.0
+   ],
+   "angle": 0
+  },
+  {
+   "name": "GND_BOT",
+   "lib": "ads_rflib",
+   "cell": "GROUND",
+   "origin": [
+    -3.25,
+    -5.0
+   ],
+   "angle": 0
+  },
+  {
+   "name": "GND_S",
+   "lib": "ads_rflib",
+   "cell": "GROUND",
+   "origin": [
+    -9.75,
+    -0.75
+   ],
+   "angle": 0
+  },
+  {
+   "name": "GND_TOP",
+   "lib": "ads_rflib",
+   "cell": "GROUND",
+   "origin": [
+    -3.25,
+    4.0
+   ],
+   "angle": 0
+  },
+  {
+   "name": "HB1",
+   "lib": "ads_simulation",
+   "cell": "HarmonicBalance",
+   "origin": [
+    -9.0,
+    -7.5
+   ],
+   "angle": 0,
+   "params": {
+    "MaxOrder": "12",
+    "Freq": "2.45 GHz",
+    "Order": "12",
+    "StatusLevel": "2",
+    "FundOversample": "",
+    "Oversample": "",
+    "PackFFT": "",
+    "MaxIters": "",
+    "GuardThresh": "",
+    "SamanskiiConstant": "",
+    "Restart": "",
+    "ArcLevelMaxStep": "0.0",
+    "MaxStepRatio": "100",
+    "MaxShrinkage": "1.0e-5",
+    "OutputAllSolns": "",
+    "ArcMaxStep": "0.0",
+    "ArcMinValue": "",
+    "ArcMaxValue": "",
+    "SS_MixerMode": "",
+    "SS_UseSweepPlan": "",
+    "SS_Plan": "",
+    "SS_Start": "1.0 GHz",
+    "SS_Stop": "10.0 GHz",
+    "SS_Step": "1.0 GHz",
+    "SS_Center": "",
+    "SS_Span": "",
+    "SS_Lin": "",
+    "SS_Dec": "",
+    "SS_Log": "",
+    "SS_Reverse": "",
+    "SS_Pt": "",
+    "SS_Sort": "LINEAR START STEP",
+    "SS_Freq": "",
+    "SS_Thresh": "",
+    "UseAllSS_Freqs": "",
+    "MergeSS_Freqs": "",
+    "InputFreq": "noisefreq",
+    "NLNoiseMode": "",
+    "NLNoiseUseSweepPlan": "",
+    "NoiseFreqPlan": "",
+    "NLNoiseStart": "1.0 GHz",
+    "NLNoiseStop": "10.0 GHz",
+    "NLNoiseStep": "1.0 GHz",
+    "NLNoiseCenter": "",
+    "NLNoiseSpan": "",
+    "NLNoiseLin": "",
+    "NLNoiseDec": "",
+    "NLNoiseLog": "",
+    "NLNoiseReverse": "",
+    "NLNoisePt": "",
+    "NLNoiseSort": "LINEAR START STEP",
+    "FreqForNoise": "",
+    "NoiseInputPort": "1",
+    "NoiseOutputPort": "2",
+    "FM_Noise": "",
+    "NoiseNode": "",
+    "NoiseThresh": "",
+    "IncludePortNoise": "yes",
+    "NoisyTwoPort": "",
+    "BandwidthForNoise": "1.0 Hz",
+    "OutputBudgetIV": "",
+    "UseInitialAWHB": "",
+    "AWHB_WindowSize": "",
+    "GMRES_Restart": "",
+    "KrylovUsePacking": "",
+    "KrylovPackingThresh": "",
+    "KrylovTightTol": "",
+    "KrylovLooseTol": "",
+    "KrylovLooseIters": "",
+    "KrylovMaxIters": "",
+    "AvailableRAMsize": "",
+    "KrylovSS_Tol": "",
+    "KrylovUseGMRES_Float": "",
+    "RecalculateWaveforms": "",
+    "UseCompactFreqMap": "",
+    "OscMode": "",
+    "OscPortName": "",
+    "IgnoreOscErrors": "",
+    "SweepVar": "",
+    "UseSweepPlan": "",
+    "SweepPlan": "",
+    "Start": "1",
+    "Stop": "10",
+    "Step": "1",
+    "Center": "",
+    "Span": "",
+    "Lin": "",
+    "Dec": "",
+    "Log": "",
+    "Reverse": "",
+    "Pt": "",
+    "Sort": "LINEAR START STEP",
+    "OutputPlan": "",
+    "NodeNestLevel": "2",
+    "NodeName": "",
+    "EquationNestLevel": "2",
+    "EquationName": "",
+    "Noisecon": "",
+    "NoiseConMode": "",
+    "InFile": " ",
+    "UseInFile": "",
+    "OutFile": " ",
+    "UseOutFile": "",
+    "Other": "",
+    "SavedEquationNestLevel": "2",
+    "SavedEquationName": "",
+    "AttachedEquationName": "",
+    "OscUseNodes": "yes",
+    "OscNodePlus": "",
+    "OscNodeMinus": "",
+    "OscFundIndex": "1",
+    "OscHarm": "1",
+    "OscNumOctaves": "2.0",
+    "OscSteps": "20.0",
+    "StopTime": "",
+    "MaxTimeStep": "",
+    "IV_RelTol": "",
+    "AddtlTranParamsTAHB": "",
+    "OneToneTranTAHB": "yes",
+    "OutputTranDataTAHB": "",
+    "MaxItersCustom": "",
+    "SamanskiiConstantCustom": "",
+    "GMRES_RestartCustom": "",
+    "GuardThreshCustom": "",
+    "SteadyStateMinTime": "",
+    "DeviceCurrentNestLevel": "0",
+    "DeviceCurrentName": "",
+    "CurrentNestLevel": "999",
+    "DeviceVoltageNestLevel": "0",
+    "DeviceVoltageName": "",
+    "Timeout": "",
+    "HBSS_WSP": "0"
+   }
+  },
+  {
+   "name": "I_Probe1",
+   "lib": "ads_rflib",
+   "cell": "I_Probe",
+   "origin": [
+    -6.5,
+    0.0
+   ],
+   "angle": 180,
+   "params": {
+    "Mode": "0",
+    "C": "",
+    "L": "",
+    "Gain": "",
+    "wImax": "",
+    "Layer": "\"ads_device:ads_label\""
+   }
+  },
+  {
+   "name": "L1",
+   "lib": "ads_rflib",
+   "cell": "L",
+   "origin": [
+    0.0,
+    2.0
+   ],
+   "angle": 0,
+   "params": {
+    "L": "47 nH",
+    "R": "",
+    "Temp": "",
+    "Trise": "",
+    "Tnom": "",
+    "TC1": "",
+    "TC2": "",
+    "InitCond": "",
+    "Model": "",
+    "_M": ""
+   }
+  },
+  {
+   "name": "L2",
+   "lib": "ads_rflib",
+   "cell": "L",
+   "origin": [
+    0.0,
+    -2.0
+   ],
+   "angle": 0,
+   "params": {
+    "L": "47 nH",
+    "R": "",
+    "Temp": "",
+    "Trise": "",
+    "Tnom": "",
+    "TC1": "",
+    "TC2": "",
+    "InitCond": "",
+    "Model": "",
+    "_M": ""
+   }
+  },
+  {
+   "name": "P1",
+   "lib": "ads_sources",
+   "cell": "P_1Tone",
+   "origin": [
+    -9.0,
+    0.0
+   ],
+   "angle": 0,
+   "params": {
+    "Num": "1",
+    "Z": "50 Ohm",
+    "P": "polar(dbmtow(pwr),0)",
+    "Freq": "2.45 GHz",
+    "PhaseNoise": "",
+    "P_USB": "",
+    "P_LSB": "",
+    "Mod": "",
+    "Pac": "polar(dbmtow(0),0)",
+    "FundIndex": "",
+    "Vdc": "",
+    "Temp": "",
+    "Other": ""
+   }
+  },
+  {
+   "name": "R1",
+   "lib": "ads_rflib",
+   "cell": "R",
+   "origin": [
+    3.5,
+    2.0
+   ],
+   "angle": 270,
+   "params": {
+    "R": "rl",
+    "Temp": "",
+    "Trise": "",
+    "Tnom": "",
+    "TC1": "",
+    "TC2": "",
+    "wPmax": "",
+    "wImax": "",
+    "Model": "",
+    "Width": "",
+    "Length": "",
+    "_M": ""
+   }
+  },
+  {
+   "name": "Sweep1",
+   "lib": "ads_simulation",
+   "cell": "ParamSweep",
+   "origin": [
+    -5.5,
+    -7.5
+   ],
+   "angle": 0,
+   "params": {
+    "UseSweepPlan": "",
+    "SweepPlan": "",
+    "SweepVar": "\"pwr\"",
+    "SimInstanceName": "\"HB1\"",
+    "StatusLevel": "2",
+    "RestoreNomValues": "",
+    "Start": "0",
+    "Stop": "30",
+    "Step": "1",
+    "Center": "",
+    "Span": "",
+    "Lin": "",
+    "Dec": "",
+    "Log": "",
+    "Reverse": "",
+    "Pt": "",
+    "Sort": "LINEAR START STEP"
+   }
+  },
+  {
+   "name": "TL1",
+   "lib": "ads_tlines",
+   "cell": "TLIN",
+   "origin": [
+    -2.5,
+    4.5
+   ],
+   "angle": 270,
+   "params": {
+    "Z": "80 Ohm",
+    "E": "30",
+    "F": "2.45 GHz"
+   }
+  },
+  {
+   "name": "TL2",
+   "lib": "ads_tlines",
+   "cell": "TLIN",
+   "origin": [
+    -2.5,
+    -4.5
+   ],
+   "angle": 90,
+   "params": {
+    "Z": "115 Ohm",
+    "E": "45",
+    "F": "2.45 GHz"
+   }
+  },
+  {
+   "name": "VAR1",
+   "lib": "ads_datacmps",
+   "cell": "VAR",
+   "origin": [
+    -2.0,
+    -7.5
+   ],
+   "angle": 0,
+   "params": {
+    "": "pwr"
+   }
+  },
+  {
+   "name": "V_DN",
+   "lib": "ads_rflib",
+   "cell": "V_Probe",
+   "origin": [
+    3.0,
+    -2.75
+   ],
+   "angle": 0,
+   "params": {
+    "Layer": "\"cond:drawing\""
+   }
+  },
+  {
+   "name": "V_IN",
+   "lib": "ads_rflib",
+   "cell": "V_Probe",
+   "origin": [
+    -5.625,
+    -1.0
+   ],
+   "angle": 0,
+   "params": {
+    "Layer": "\"cond:drawing\""
+   }
+  },
+  {
+   "name": "V_UP",
+   "lib": "ads_rflib",
+   "cell": "V_Probe",
+   "origin": [
+    3.0,
+    2.75
+   ],
+   "angle": 0,
+   "params": {
+    "Layer": "\"cond:drawing\""
+   }
+  }
+ ],
+ "nets": {
+  "N__31": [
+   [
+    "V_DN",
+    "P__0"
+   ],
+   [
+    "R1",
+    "P__0"
+   ],
+   [
+    "C4",
+    "P__1"
+   ],
+   [
+    "L2",
+    "P__1"
+   ]
+  ],
+  "N__0": [
+   [
+    "V_UP",
+    "P__0"
+   ],
+   [
+    "R1",
+    "P__1"
+   ],
+   [
+    "C3",
+    "P__1"
+   ],
+   [
+    "L1",
+    "P__1"
+   ]
+  ],
+  "gnd!": [
+   [
+    "C4",
+    "P__0"
+   ],
+   [
+    "C3",
+    "P__0"
+   ],
+   [
+    "GND_BOT",
+    "P__0"
+   ],
+   [
+    "GND_TOP",
+    "P__0"
+   ],
+   [
+    "TL2",
+    "P__0"
+   ],
+   [
+    "TL1",
+    "P__0"
+   ],
+   [
+    "GND_S",
+    "P__0"
+   ],
+   [
+    "P1",
+    "P__0"
+   ]
+  ],
+  "N__12": [
+   [
+    "L2",
+    "P__0"
+   ],
+   [
+    "D2",
+    "P__1"
+   ],
+   [
+    "C2",
+    "P__0"
+   ]
+  ],
+  "N__26": [
+   [
+    "L1",
+    "P__0"
+   ],
+   [
+    "D1",
+    "P__0"
+   ],
+   [
+    "D1",
+    "P__2"
+   ],
+   [
+    "C1",
+    "P__0"
+   ]
+  ],
+  "N__22": [
+   [
+    "TL2",
+    "P__1"
+   ],
+   [
+    "D2",
+    "P__0"
+   ],
+   [
+    "D2",
+    "P__2"
+   ]
+  ],
+  "N__18": [
+   [
+    "TL1",
+    "P__1"
+   ],
+   [
+    "D1",
+    "P__1"
+   ]
+  ],
+  "N__28": [
+   [
+    "C2",
+    "P__1"
+   ],
+   [
+    "C1",
+    "P__1"
+   ],
+   [
+    "V_IN",
+    "P__0"
+   ],
+   [
+    "I_Probe1",
+    "P__0"
+   ]
+  ],
+  "N__13": [
+   [
+    "I_Probe1",
+    "P__1"
+   ],
+   [
+    "P1",
+    "P__1"
+   ]
+  ]
+ },
+ "wires": [
+  {
+   "net": "N__0",
+   "points": [
+    [
+     1.0,
+     2.0
+    ],
+    [
+     2.0,
+     2.0
+    ],
+    [
+     3.0,
+     2.0
+    ],
+    [
+     3.0,
+     2.75
+    ]
+   ]
+  },
+  {
+   "net": "N__0",
+   "points": [
+    [
+     3.0,
+     2.0
+    ],
+    [
+     3.5,
+     2.0
+    ]
+   ]
+  },
+  {
+   "net": "N__12",
+   "points": [
+    [
+     -3.5,
+     -2.0
+    ],
+    [
+     -2.5,
+     -2.0
+    ],
+    [
+     0.0,
+     -2.0
+    ]
+   ]
+  },
+  {
+   "net": "N__13",
+   "points": [
+    [
+     -8.0,
+     0.0
+    ],
+    [
+     -6.75,
+     0.0
+    ]
+   ]
+  },
+  {
+   "net": "N__18",
+   "points": [
+    [
+     -2.5,
+     3.0
+    ],
+    [
+     -2.5,
+     3.5
+    ]
+   ]
+  },
+  {
+   "net": "N__22",
+   "points": [
+    [
+     -2.5,
+     -3.0
+    ],
+    [
+     -2.5,
+     -3.25
+    ],
+    [
+     -3.0,
+     -3.25
+    ],
+    [
+     -3.0,
+     -2.5
+    ]
+   ]
+  },
+  {
+   "net": "N__22",
+   "points": [
+    [
+     -2.5,
+     -3.25
+    ],
+    [
+     -2.5,
+     -3.5
+    ]
+   ]
+  },
+  {
+   "net": "N__26",
+   "points": [
+    [
+     -3.5,
+     2.0
+    ],
+    [
+     -3.0,
+     2.0
+    ],
+    [
+     -2.5,
+     2.0
+    ],
+    [
+     0.0,
+     2.0
+    ]
+   ]
+  },
+  {
+   "net": "N__26",
+   "points": [
+    [
+     -3.0,
+     2.5
+    ],
+    [
+     -3.0,
+     2.0
+    ]
+   ]
+  },
+  {
+   "net": "N__28",
+   "points": [
+    [
+     -6.5,
+     0.0
+    ],
+    [
+     -5.625,
+     0.0
+    ],
+    [
+     -4.75,
+     0.0
+    ],
+    [
+     -4.75,
+     -2.0
+    ],
+    [
+     -4.5,
+     -2.0
+    ]
+   ]
+  },
+  {
+   "net": "N__28",
+   "points": [
+    [
+     -4.75,
+     0.0
+    ],
+    [
+     -4.75,
+     2.0
+    ],
+    [
+     -4.5,
+     2.0
+    ]
+   ]
+  },
+  {
+   "net": "N__28",
+   "points": [
+    [
+     -5.625,
+     0.0
+    ],
+    [
+     -5.625,
+     -1.0
+    ]
+   ]
+  },
+  {
+   "net": "N__31",
+   "points": [
+    [
+     1.0,
+     -2.0
+    ],
+    [
+     2.0,
+     -2.0
+    ],
+    [
+     3.0,
+     -2.0
+    ],
+    [
+     3.0,
+     -2.75
+    ]
+   ]
+  },
+  {
+   "net": "N__31",
+   "points": [
+    [
+     3.0,
+     -2.0
+    ],
+    [
+     3.5,
+     -2.0
+    ],
+    [
+     3.5,
+     1.0
+    ]
+   ]
+  },
+  {
+   "net": "gnd!",
+   "points": [
+    [
+     2.0,
+     -3.0
+    ],
+    [
+     2.0,
+     -4.5
+    ],
+    [
+     -2.5,
+     -4.5
+    ],
+    [
+     -3.25,
+     -4.5
+    ],
+    [
+     -3.25,
+     -5.0
+    ]
+   ]
+  },
+  {
+   "net": "gnd!",
+   "points": [
+    [
+     2.0,
+     3.0
+    ],
+    [
+     2.0,
+     4.5
+    ],
+    [
+     -2.5,
+     4.5
+    ],
+    [
+     -3.25,
+     4.5
+    ],
+    [
+     -3.25,
+     4.0
+    ]
+   ]
+  },
+  {
+   "net": "gnd!",
+   "points": [
+    [
+     -9.75,
+     -0.75
+    ],
+    [
+     -9.75,
+     0.0
+    ],
+    [
+     -9.0,
+     0.0
+    ]
+   ]
+  }
+ ],
+ "var_part": "VAR1",
+ "vars": {
+  "pwr": "23",
+  "rl": "550"
+ },
+ "tahb_off": true
+}

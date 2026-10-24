@@ -1,0 +1,54 @@
+{
+ "ads": null,
+ "libs": {},
+ "design": {
+  "workspace": "<abs path to *_wrk>",
+  "library": "<lib>",
+  "cell": "<cell>"
+ },
+ "parts": [
+  {
+   "name": "C1",
+   "lib": "ads_rflib",
+   "cell": "C",
+   "origin": [
+    0.0,
+    0.0
+   ],
+   "angle": 0,
+   "params": {
+    "C": "100 pF"
+   }
+  }
+ ],
+ "nets": {
+  "n1": [
+   [
+    "C1",
+    "P__0"
+   ],
+   [
+    "C1",
+    "P__1"
+   ]
+  ]
+ },
+ "wires": [
+  {
+   "net": "n1",
+   "points": [
+    [
+     0.0,
+     0.0
+    ],
+    [
+     1.0,
+     0.0
+    ]
+   ]
+  }
+ ],
+ "vars": {},
+ "var_part": null,
+ "tahb_off": false
+}

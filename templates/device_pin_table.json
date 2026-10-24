@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "purpose": "AI 编写文本 spec 时使用的 R0 引脚偏移表；坐标均为相对器件 origin 的偏移。",
+  "sources": "ADS 自动化手册 6.1 及 rectA/rectB 本机实测；只保证列出的 master。",
+  "rotation": {
+    "0": "(x, y) -> (x, y)",
+    "90": "(x, y) -> (-y, x)",
+    "180": "(x, y) -> (-x, -y)",
+    "270": "(x, y) -> (y, -x)"
+  },
+  "absolute_pin_rule": "absolute_pin = origin + rotation(r0_offset, angle)",
+  "devices": [
+    {
+      "library": "ads_sources",
+      "cell": "P_1Tone",
+      "r0_offsets": {"P__0": [0, 0], "P__1": [1, 0]},
+      "notes": "本例中 P__0 接地、P__1 接射频输出。Freq 必须等于分析频率；P 常写 polar(dbmtow(pwr),0)。"
+    },
+    {
+      "library": "ads_rflib",
+      "cell": "I_Probe",
+      "r0_offsets": {"P__0": [0, 0], "P__1": [0.25, 0]},
+      "notes": "电流探针，网表中为 Short；两个引脚都必须接入网络。"
+    },
+    {
+      "library": "ads_rflib",
+      "cell": "V_Probe",
+      "r0_offsets": {"P__0": [0, 0]},
+      "notes": "单脚电压探针，只有一个网络引用；不要按两端器件处理。"
+    },
+    {
+      "library": "ads_rflib",
+      "cell": "GROUND",
+      "r0_offsets": {"P__0": [0, 0]},
+      "notes": "单脚地符号。多个地符号可以用同一地总线连接。"
+    },
+    {
+      "library": "ads_rflib",
+      "cell": "C",
+      "r0_offsets": {"P__0": [1, 0], "P__1": [0, 0]},
+      "notes": "电容，参数示例 C=100 pF。"
+    },
+    {
+      "library": "ads_rflib",
+      "cell": "R",
+      "r0_offsets": {"P__0": [1, 0], "P__1": [0, 0]},
+      "notes": "电阻，参数示例 R=2 kOhm 或 R=rl。"
+    },
+    {
+      "library": "ads_rflib",
+      "cell": "L",
+      "r0_offsets": {"P__0": [0, 0], "P__1": [1, 0]},
+      "notes": "电感，参数示例 L=22 nH。"
+    },
+    {
+      "library": "ads_tlines",
+      "cell": "TLIN",
+      "r0_offsets": {"P__0": [0, 0], "P__1": [1, 0]},
+      "notes": "传输线，参数示例 Z=80 Ohm; E=30; F=2.45 GHz。"
+    },
+    {
+      "library": "HFDiode",
+      "cell": "di_hp_HSMS282B_20000301",
+      "r0_offsets": {"P__0": [-0.5, -0.5], "P__1": [0, 0], "P__2": [0, -1]},
+      "notes": "三脚模型。本工具示例中 P__0 与 P__2 接同一节点，P__1 为另一端；具体阳极/阴极方向必须按模型和参考电路确认。"
+    },
+    {
+      "library": "HFDiode",
+      "cell": "di_hp_HSMS2850_20000301",
+      "r0_offsets": {"P__0": [-0.5, -0.5], "P__1": [0, 0], "P__2": [0, -1]},
+      "notes": "rectB 使用的三脚模型，偏移与 282B 示例相同；方向仍需按实际模型核对。"
+    },
+    {
+      "library": "ads_simulation",
+      "cell": "HarmonicBalance",
+      "r0_offsets": {},
+      "notes": "无引脚控制器。常用参数 Freq=...; Order=12; MaxOrder=12；命令行仿真通常设 tahb_off=true。"
+    },
+    {
+      "library": "ads_simulation",
+      "cell": "ParamSweep",
+      "r0_offsets": {},
+      "notes": "无引脚控制器。常用参数 SweepVar=pwr; Start=...; Stop=...; Step=...; SimInstanceName=HB1。"
+    },
+    {
+      "library": "ads_datacmps",
+      "cell": "VAR",
+      "r0_offsets": {},
+      "notes": "无引脚控制器。变量写在 [变量] 区段，并在 [选项] 写 var_part=VAR1。"
+    }
+  ]
+}

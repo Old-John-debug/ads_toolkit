@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# ADS generated design/simulation artifacts
+*.ds
+*.raw
+*.cdslck
+backup_*
+**/dc_annotation/
+**/*_data/
+**/sim_out/
+**/sweep_out/
+
+# Editors / OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

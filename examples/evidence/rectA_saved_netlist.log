@@ -1,0 +1,57 @@
+; Top Design: "MyLibrary_lib:rectA:schematic"
+; Netlisted using Hierarchy Policy: "Standard"
+
+Options ResourceUsage=yes UseNutmegFormat=no EnableOptim=no TopDesignName="MyLibrary_lib:rectA:schematic" DcopOutputNodeVoltages=yes DcopOutputPinCurrents=yes DcopOutputAllSweepPoints=no DcopOutputDcopType=0
+; Library Name: ads_rflib
+; Cell Name: V_Probe
+; View Name: schematic
+define V_Probe ( P1 ) 
+parameters 
+Short:Short1  P1 net Mode=0 SaveCurrent=no 
+end V_Probe
+
+
+pwr=23
+rl=550
+ParamSweep:Sweep1 SimInstanceName[1]="HB1" StatusLevel=2 SweepVar="pwr" SweepPlan="Sweep1_stim" 
+
+SweepPlan: Sweep1_stim Start=0 Stop=30 Step=1 
+
+HB:HB1 MaxOrder=12 Freq[1]=2.45 GHz Order[1]=12 StatusLevel=2 HBSS_WSP=0 TAHB_Enable=0 OutputPlan="HB1_Output" 
+
+OutputPlan:HB1_Output \
+      Type="Output" \
+      UseNodeNestLevel=yes \
+      NodeNestLevel=2 \
+      UseEquationNestLevel=yes \
+      EquationNestLevel=2 \
+      UseSavedEquationNestLevel=yes \
+      SavedEquationNestLevel=2 \
+      UseDeviceCurrentNestLevel=no \
+      DeviceCurrentNestLevel=0 \
+      DeviceCurrentDeviceType="All" \
+      DeviceCurrentSymSyntax=yes \
+      UseCurrentNestLevel=yes \
+      CurrentNestLevel=999 \
+      UseDeviceVoltageNestLevel=no \
+      DeviceVoltageNestLevel=0 \
+      DeviceVoltageDeviceType="All"
+
+V_Probe:V_DN  N__31 
+V_Probe:V_UP  N__0 
+R:R1  N__0 N__31 R=rl Noise=yes 
+C:C4  N__31 0 C=100 pF 
+C:C3  N__0 0 C=100 pF 
+L:L2  N__12 N__31 L=47 nH Noise=yes  
+L:L1  N__26 N__0 L=47 nH Noise=yes  
+TLIN:TL2  0 N__22 Z=115 Ohm E=45 F=2.45 GHz 
+TLIN:TL1  0 N__18 Z=80 Ohm E=30 F=2.45 GHz 
+#uselib "HfDiodeLibrary" , "di_hp_HSMS282B_20000301"
+di_hp_HSMS282B_20000301:D2  N__12 N__22 N__22 
+#uselib "HfDiodeLibrary" , "di_hp_HSMS282B_20000301"
+di_hp_HSMS282B_20000301:D1  N__18 N__26 N__26 
+C:C2  N__28 N__12 C=100 pF 
+C:C1  N__28 N__26 C=100 pF 
+V_Probe:V_IN  N__28 
+Short:I_Probe1  N__28 N__13 Mode=0 SaveCurrent=yes 
+Port:P1  0 N__13 Num=1 Z=50 Ohm P[1]=polar(dbmtow(pwr),0) Freq[1]=2.45 GHz    Noise=yes Pac=polar(dbmtow(0),0) 

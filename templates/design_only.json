@@ -1,0 +1,10 @@
+{
+ "ads": null,
+ "libs": {},
+ "design": {
+  "workspace": "<absolute path to *_wrk; relative paths resolve from this file>",
+  "library": "<library name>",
+  "cell": "<schematic cell name>"
+ },
+ "device_types": []
+}

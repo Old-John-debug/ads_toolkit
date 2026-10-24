@@ -1,0 +1,40 @@
+版本 = 1
+
+[工程]
+工作区 = <工作区路径；相对路径以本文件所在目录为基准>
+库 = <ADS 库名>
+单元 = <原理图单元名>
+# 可选：ADS路径 = <ADS 安装根目录>
+
+[变量]
+pwr = <默认输入功率 dBm>
+rl = <负载阻值，仅在器件参数引用 rl 时需要>
+
+[器件]
+# 固定格式：名称 | ADS库 | ADS单元 | (x, y) | 角度 | 参数1=值; 参数2=值
+# 角度只能是 0/90/180/270；无参数时保留最后一个 | 且右侧留空。
+P1 | ads_sources | P_1Tone | (<x>, <y>) | 0 | Z=50 Ohm; P=polar(dbmtow(pwr),0); Freq=<分析频率>
+GND_S | ads_rflib | GROUND | (<x>, <y>) | 0 |
+# 在此继续添加电路器件。HB1、Sweep1、VAR1 也必须明确列出，例如：
+HB1 | ads_simulation | HarmonicBalance | (<x>, <y>) | 0 | Freq=<分析频率>; Order=12; MaxOrder=12
+Sweep1 | ads_simulation | ParamSweep | (<x>, <y>) | 0 | SweepVar=pwr; Start=<起始功率>; Stop=<终止功率>; Step=<步长>; SimInstanceName=HB1
+VAR1 | ads_datacmps | VAR | (<x>, <y>) | 0 |
+
+[网络]
+# 固定格式：网络名 = 器件.引脚, 器件.引脚, ...
+# 每个实际引脚必须出现且只能出现一次；控制器没有引脚，不需要写。
+gnd = P1.P__0, GND_S.P__0
+nsrc = P1.P__1, <下一器件>.<引脚>
+
+[连线]
+# 固定格式：网络名 = (x1, y1) -> (x2, y2) -> (x3, y3)
+# 只接受非零正交折线；同一网络可以写多行。
+gnd = (<x1>, <y1>) -> (<x2>, <y2>)
+nsrc = (<x1>, <y1>) -> (<x2>, <y2>)
+
+[选项]
+tahb_off = true
+var_part = VAR1
+# 可选：varblock = Sweep1.HB1.HB
+# 可选：power_axis = pwr
+# 可选：器件类型 = <额外网表器件类型1>, <类型2>
