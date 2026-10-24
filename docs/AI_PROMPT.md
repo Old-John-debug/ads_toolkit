@@ -26,9 +26,12 @@ https://github.com/Old-John-debug/ads_toolkit.git
 先阅读：
 - README.md
 - docs/USAGE.md
+- docs/LAYOUT_PLAN.md
 - templates/circuit_skeleton.txt
+- templates/layout_plan_skeleton.txt
 - templates/device_pin_table.json
-- examples/specs/rectB_circuit.txt
+- examples/specs/demo_circuit.txt
+- examples/specs/demo_layout.plan.txt
 
 工作原则：
 1. 先逻辑，后几何。第一轮只整理设计三件套、变量、器件、参数和网络；确认引脚角色后再写坐标和连线。
@@ -38,11 +41,15 @@ https://github.com/Old-John-debug/ads_toolkit.git
 5. P_1Tone.Freq 必须与分析频率一致；命令行 HB 需要 tahb_off=true；SweepVar/SimInstanceName 由工具自动补引号，不要手工重复加错。
 6. 单位、表达式和器件值保留 ADS 写法，例如 22 nH、100 pF、2 kOhm、polar(dbmtow(pwr),0)。
 7. 文本无法无损表示的字符（如参数值里的分号、竖线、换行）不能硬塞；遇到时改用 JSON 或明确报告限制。
+8. 项目专属器件不要写进工具包核心：用项目 `pin-table` 和 spec 的 `device_types`。多脚器件同一网络的额外引脚由布局器绕到符号外侧并接；移动实例不会带动已有连线，改布局请改 plan/spec 后重新生成。
+9. 不要把某篇论文的数值、结论或器件型号写进通用模板；这些应留在项目目录。
 
 执行流程：
 阶段 0：需求核对。确认工作区、库、单元、目标频率、输入功率范围、负载 RL、器件库/单元、关键引脚角色、是否有参考网表。
 阶段 1：输出“假设清单 + 逻辑草案”。列出未确认项；不要急着写坐标。
-阶段 2：依据 device_pin_table.json 计算每个引脚绝对坐标，再写连线。布局优先使用主链水平、对地支路、地总线、探针短接线；避免线穿过器件本体。
+阶段 2：优先使用简化布局计划。如果是“源 → 串联主链 → 输出节点”加对地支路、探针、控制器的拓扑，只写器件、网络和布局角色，运行：
+  "<ADS>\tools\python\python.exe" -B -m adstk layout <plan.txt> <spec.txt>
+生成完整 v1；再检查生成的坐标和连线。复杂多主链或该布局器不支持的拓扑，才手写 v1 坐标和连线。
 阶段 3：保存为 .txt，运行：
   "<ADS>\tools\python\python.exe" -B -m adstk build <spec.txt> --reference <reference.log> --netlist-out <built.log>
 若没有 reference，去掉 --reference，但明确告诉用户：只能验证几何和 spec/网表连接，不能证明电路原理完全正确。

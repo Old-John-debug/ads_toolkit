@@ -1,0 +1,40 @@
+版本 = 1
+
+[工程]
+工作区 = ../workspace_demo
+库 = demo_lib
+单元 = demo_network
+
+[变量]
+pwr = 0
+
+[器件]
+P1 | ads_sources | P_1Tone | (-1.0, 0.0) | 0 | Z=50 Ohm; P=polar(dbmtow(pwr),0); Freq=1 GHz
+GND1 | ads_rflib | GROUND | (-1.0, -1.75) | 0 | 
+R1 | ads_rflib | R | (2.5, 0.0) | 180 | R=50 Ohm
+C1 | ads_rflib | C | (3.25, 0.0) | 270 | C=1 pF
+R2 | ads_rflib | R | (4.75, 0.0) | 270 | R=50 Ohm
+V_IN | ads_rflib | V_Probe | (0.75, -0.75) | 0 | 
+V_OUT | ads_rflib | V_Probe | (6.25, -0.75) | 0 | 
+HB1 | ads_simulation | HarmonicBalance | (0.0, -3.75) | 0 | Freq=1 GHz; Order=7; MaxOrder=7
+Sweep1 | ads_simulation | ParamSweep | (5.0, -3.75) | 0 | SweepVar=pwr; Start=0; Stop=10; Step=1; SimInstanceName=HB1
+VAR1 | ads_datacmps | VAR | (10.0, -3.75) | 0 | 
+
+[网络]
+gnd = P1.P__0, GND1.P__0, C1.P__0, R2.P__0
+nsrc = P1.P__1, V_IN.P__0, R1.P__0
+nout = R1.P__1, C1.P__1, R2.P__1, V_OUT.P__0
+
+[连线]
+gnd = (-1.0, 0.0) -> (-1.0, -1.75)
+gnd = (3.25, -1.0) -> (3.25, -1.75)
+gnd = (4.75, -1.0) -> (4.75, -1.75)
+gnd = (-1.0, -1.75) -> (4.75, -1.75)
+nsrc = (0.0, 0.0) -> (1.5, 0.0)
+nsrc = (0.75, 0.0) -> (0.75, -0.75)
+nout = (2.5, 0.0) -> (6.25, 0.0)
+nout = (6.25, 0.0) -> (6.25, -0.75)
+
+[选项]
+tahb_off = true
+var_part = VAR1

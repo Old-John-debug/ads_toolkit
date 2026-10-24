@@ -1,7 +1,7 @@
 {
   "version": 1,
   "purpose": "AI 编写文本 spec 时使用的 R0 引脚偏移表；坐标均为相对器件 origin 的偏移。",
-  "sources": "ADS 自动化手册 6.1 及 rectA/rectB 本机实测；只保证列出的 master。",
+  "sources": "ADS 自动化手册 6.1 与标准 ads_rflib/ads_sources/ads_simulation 器件实测；厂商器件请使用项目专属引脚表。",
   "rotation": {
     "0": "(x, y) -> (x, y)",
     "90": "(x, y) -> (-y, x)",
@@ -57,18 +57,6 @@
       "cell": "TLIN",
       "r0_offsets": {"P__0": [0, 0], "P__1": [1, 0]},
       "notes": "传输线，参数示例 Z=80 Ohm; E=30; F=2.45 GHz。"
-    },
-    {
-      "library": "HFDiode",
-      "cell": "di_hp_HSMS282B_20000301",
-      "r0_offsets": {"P__0": [-0.5, -0.5], "P__1": [0, 0], "P__2": [0, -1]},
-      "notes": "三脚模型。本工具示例中 P__0 与 P__2 接同一节点，P__1 为另一端；具体阳极/阴极方向必须按模型和参考电路确认。"
-    },
-    {
-      "library": "HFDiode",
-      "cell": "di_hp_HSMS2850_20000301",
-      "r0_offsets": {"P__0": [-0.5, -0.5], "P__1": [0, 0], "P__2": [0, -1]},
-      "notes": "rectB 使用的三脚模型，偏移与 282B 示例相同；方向仍需按实际模型核对。"
     },
     {
       "library": "ads_simulation",

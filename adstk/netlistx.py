@@ -3,10 +3,7 @@ import re
 from collections import Counter
 
 DEV_RE = re.compile(r"^([A-Za-z0-9_]+):([A-Za-z0-9_]+)\s*(.*)$")
-DEVTYPES = (
-    "V_Probe", "Short", "Port", "TLIN", "R", "C", "L",
-    "di_hp_HSMS282B_20000301", "di_hp_HSMS2850_20000301",
-)
+DEVTYPES = ("V_Probe", "Short", "Port", "TLIN", "R", "C", "L")
 CTRL_PREFIX = ("HB:", "ParamSweep:", "SweepPlan:")
 VAR_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=\S+$")
 

@@ -1,0 +1,49 @@
+版本 = 1
+
+[工程]
+工作区 = <工作区路径；相对路径以本文件所在目录为基准>
+库 = <ADS 库名>
+单元 = <原理图单元名>
+# 可选：ADS路径 = <ADS 安装根目录>
+
+[变量]
+pwr = <默认输入功率 dBm>
+# 可选：rl = <负载阻值>
+
+[器件]
+# 与 v1 不同：这里不写坐标和角度。
+# 固定格式：名称 | ADS库 | ADS单元 | 参数1=值; 参数2=值
+P1 | ads_sources | P_1Tone | Z=50 Ohm; P=polar(dbmtow(pwr),0); Freq=<分析频率>
+GND_S | ads_rflib | GROUND |
+L1 | ads_rflib | L | L=<值>
+L2 | ads_rflib | L | L=<值>
+# 二极管/多脚器件使用项目专属引脚表，不要在本模板里硬编码厂商型号。
+D1 | <二极管库> | <二极管单元> |
+V_OUT | ads_rflib | V_Probe |
+HB1 | ads_simulation | HarmonicBalance | Freq=<分析频率>; Order=12; MaxOrder=12
+Sweep1 | ads_simulation | ParamSweep | SweepVar=pwr; Start=<起始功率>; Stop=<终止功率>; Step=<步长>; SimInstanceName=HB1
+VAR1 | ads_datacmps | VAR |
+
+[网络]
+# 固定格式：网络名 = 器件.引脚, 器件.引脚, ...
+gnd = P1.P__0, GND_S.P__0, L1.P__1
+nsrc = P1.P__1, L2.P__0
+n_out = L2.P__1, D1.P__1, V_OUT.P__0
+
+[布局]
+# 主链按从左到右顺序写，第一个必须是源；每个主链器件连接相邻两个信号网络。
+主链 = P1, L2, D1
+# 对地器件必须恰好连接一个主链信号网络和地网络。
+对地 = L1
+# 探针必须是单脚器件，并连接到一个主链信号网络。
+探针 = V_OUT
+# 控制器必须没有引脚；也可以写 控制器 = 无。
+控制器 = HB1, Sweep1, VAR1
+# 可选：地网络 = gnd
+
+[选项]
+tahb_off = true
+var_part = VAR1
+# 可选：varblock = Sweep1.HB1.HB
+# 可选：power_axis = pwr
+# 可选：器件类型 = <额外网表器件类型1>, <类型2>

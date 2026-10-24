@@ -193,7 +193,10 @@ def parse(text):
 
 
 def _number(value):
-    return repr(float(value))
+    value = float(value)
+    if value == 0:
+        value = 0.0
+    return repr(value)
 
 
 def _point_text(point):

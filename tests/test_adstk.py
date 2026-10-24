@@ -9,7 +9,9 @@ from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from adstk import audit, build, core, netlistx, readback, results, sim, sweep
+from adstk import (audit, build, core, layout, netlistx, plan, readback,
+                   results, sim, sweep, textspec)
+from adstk.__main__ import main
 
 try:
     import pandas as pd
@@ -48,6 +50,85 @@ class SpecTests(unittest.TestCase):
                 build.load_spec(path)
 
 
+class LayoutPlanTests(unittest.TestCase):
+    ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    PLAN = os.path.join(ROOT, "examples", "specs", "demo_layout.plan.txt")
+
+    def _generate(self):
+        with open(self.PLAN, encoding="utf-8") as fh:
+            spec, hint = plan.parse(fh.read(), base_dir=os.path.dirname(self.PLAN))
+        return layout.generate(spec, hint, layout.load_pin_table())
+
+    def test_plan_generates_audit_clean_v1(self):
+        spec, problems, _ = self._generate()
+        self.assertEqual(problems, [])
+        self.assertEqual(len(spec["parts"]), 10)
+        self.assertEqual(len(spec["wires"]), 8)
+        for part in spec["parts"]:
+            self.assertAlmostEqual(part["origin"][0] / layout.GRID,
+                                   round(part["origin"][0] / layout.GRID))
+            self.assertAlmostEqual(part["origin"][1] / layout.GRID,
+                                   round(part["origin"][1] / layout.GRID))
+        text = textspec.dumps(spec, base=os.path.dirname(self.PLAN))
+        reparsed = textspec.parse(text)
+        self.assertEqual(len(reparsed["parts"]), 10)
+        self.assertEqual(len(reparsed["wires"]), 8)
+
+    def test_layout_cli_writes_v1(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output = os.path.join(tmp, "demo_layout.txt")
+            self.assertEqual(main(["layout", self.PLAN, output]), 0)
+            with open(output, encoding="utf-8") as fh:
+                spec = textspec.parse(fh.read())
+        self.assertEqual(len(spec["parts"]), 10)
+
+    def test_multipin_device_ties_extra_pins_outside(self):
+        table = {
+            ("demo", "SRC"): {"P__0": (0, 0), "P__1": (1, 0)},
+            ("demo", "GROUND"): {"P__0": (0, 0)},
+            ("demo", "D6"): {"P__0": (0, 0), "P__1": (0, -0.25), "P__5": (0, -0.5),
+                             "P__4": (1, 0), "P__3": (1, -0.25), "P__2": (1, -0.5)},
+            ("demo", "C"): {"P__0": (1, 0), "P__1": (0, 0)},
+            ("demo", "R"): {"P__0": (1, 0), "P__1": (0, 0)},
+            ("demo", "VP"): {"P__0": (0, 0)},
+            ("demo", "CTRL"): {},
+        }
+        parts = [
+            {"name": "S1", "lib": "demo", "cell": "SRC", "params": {}, "master": ("demo", "SRC", "symbol")},
+            {"name": "GND1", "lib": "demo", "cell": "GROUND", "params": {}, "master": ("demo", "GROUND", "symbol")},
+            {"name": "D1", "lib": "demo", "cell": "D6", "params": {}, "master": ("demo", "D6", "symbol")},
+            {"name": "C1", "lib": "demo", "cell": "C", "params": {}, "master": ("demo", "C", "symbol")},
+            {"name": "R1", "lib": "demo", "cell": "R", "params": {}, "master": ("demo", "R", "symbol")},
+            {"name": "V1", "lib": "demo", "cell": "VP", "params": {}, "master": ("demo", "VP", "symbol")},
+            {"name": "CTRL", "lib": "demo", "cell": "CTRL", "params": {}, "master": ("demo", "CTRL", "symbol")},
+        ]
+        spec = {"design": {"workspace": "ws", "library": "lib", "cell": "cell"},
+                "parts": parts,
+                "nets": {"gnd": [["S1", "P__0"], ["GND1", "P__0"], ["C1", "P__0"], ["R1", "P__0"]],
+                         "in": [["S1", "P__1"], ["D1", "P__0"], ["D1", "P__1"], ["D1", "P__5"], ["V1", "P__0"]],
+                         "out": [["D1", "P__2"], ["D1", "P__3"], ["D1", "P__4"],
+                                 ["C1", "P__1"], ["R1", "P__1"]]},
+                "vars": {}, "tahb_off": False}
+        hint = {"主链": ["S1", "D1"], "对地": ["C1", "R1"], "探针": ["V1"],
+                "控制器": ["CTRL"], "地网络": "gnd"}
+        generated, problems, _ = layout.generate(spec, hint, table)
+        self.assertEqual(problems, [])
+        input_wires = [w for w in generated["wires"] if w["net"] == "in"]
+        output_wires = [w for w in generated["wires"] if w["net"] == "out"]
+        diode_origin = next(p["origin"] for p in generated["parts"] if p["name"] == "D1")
+        input_outside = diode_origin[0] - 0.5
+        output_outside = diode_origin[0] + 1.5
+        self.assertTrue(any(input_outside in [p[0] for p in w["points"]] for w in input_wires))
+        self.assertTrue(any(output_outside in [p[0] for p in w["points"]] for w in output_wires))
+
+    def test_unassigned_part_is_rejected(self):
+        with open(self.PLAN, encoding="utf-8") as fh:
+            spec, hint = plan.parse(fh.read(), base_dir=os.path.dirname(self.PLAN))
+        hint["探针"] = [name for name in hint["探针"] if name != "V_OUT"]
+        with self.assertRaisesRegex(ValueError, "not assigned"):
+            layout.generate(spec, hint, layout.load_pin_table())
+
+
 class DesignOnlySpecTests(unittest.TestCase):
     def test_load_design_accepts_design_only(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -78,11 +159,12 @@ class NetlistTests(unittest.TestCase):
         old = BASE_NETLIST.replace('NodeName[1]="V_OUT"', 'NodeName[1]="V_IN"')
         self.assertFalse(netlistx.equivalent(old, BASE_NETLIST, log=lambda *a: None))
 
-    def test_hsms2850_is_a_known_device(self):
-        diode = "di_hp_HSMS2850_20000301:D1 N__2 N__3 N__3\n"
+    def test_project_device_types_can_be_added(self):
+        diode = "X_DIODE:D1 N__2 N__3 N__3\n"
         old = BASE_NETLIST + diode
         new = old.replace("N__3", "N__8")
-        self.assertTrue(netlistx.equivalent(old, new, log=lambda *a: None))
+        self.assertTrue(netlistx.equivalent(
+            old, new, log=lambda *a: None, device_types=["X_DIODE"]))
 
     def test_unknown_type_is_compared_not_dropped(self):
         old = BASE_NETLIST + "MLIN:ML1 N__1 N__2 W=1 mm L=2 mm\n"
@@ -229,14 +311,14 @@ class ParameterTests(unittest.TestCase):
 
 class SimTests(unittest.TestCase):
     def test_top_name_has_no_project_fallback(self):
-        self.assertEqual(sim._top_name('; Top Design: "L:rectB:schematic"\n'), "rectB")
+        self.assertEqual(sim._top_name('; Top Design: "L:demo:schematic"\n'), "demo")
         with self.assertRaises(ValueError):
             sim._top_name("R:R1 0 1 R=50 Ohm\n")
 
     def test_stale_dataset_is_removed_before_run(self):
-        netlist = '; Top Design: "L:rectB:schematic"\n'
+        netlist = '; Top Design: "L:demo:schematic"\n'
         with tempfile.TemporaryDirectory() as tmp:
-            ds_path = os.path.join(tmp, "rectB.ds")
+            ds_path = os.path.join(tmp, "demo.ds")
             with open(ds_path, "w", encoding="utf-8") as fh:
                 fh.write("old")
 
@@ -253,16 +335,16 @@ class SimTests(unittest.TestCase):
                 self.assertEqual(fh.read(), "new")
 
     def test_stderr_error_and_missing_dataset_fail(self):
-        netlist = '; Top Design: "L:rectB:schematic"\n'
+        netlist = '; Top Design: "L:demo:schematic"\n'
         with tempfile.TemporaryDirectory() as tmp:
-            with open(os.path.join(tmp, "rectB.ds"), "w", encoding="utf-8") as fh:
+            with open(os.path.join(tmp, "demo.ds"), "w", encoding="utf-8") as fh:
                 fh.write("stale")
             returned = types.SimpleNamespace(returncode=0, stdout="", stderr="Error detected by test")
             with mock.patch.object(sim.subprocess, "run", return_value=returned):
                 ok, ds, _ = sim.run_netlist(netlist, tmp, "ADS")
             self.assertFalse(ok)
             self.assertIsNone(ds)
-            self.assertFalse(os.path.exists(os.path.join(tmp, "rectB.ds")))
+            self.assertFalse(os.path.exists(os.path.join(tmp, "demo.ds")))
 
 
 class SimEdgeTests(unittest.TestCase):

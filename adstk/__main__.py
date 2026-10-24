@@ -1,4 +1,4 @@
-"""CLI: python -m adstk {build|readback|sim|report|sweep|convert} ..."""
+"""CLI: python -m adstk {build|readback|sim|report|sweep|layout|convert} ..."""
 import argparse
 import json
 import os
@@ -125,6 +125,29 @@ def cmd_sweep(a):
     return 1 if errors else 0
 
 
+def cmd_layout(a):
+    from . import layout, plan, textspec
+
+    plan_path = os.path.abspath(a.plan)
+    with open(plan_path, encoding="utf-8") as fh:
+        spec, layout_hint = plan.parse(fh.read(), base_dir=os.path.dirname(plan_path))
+    table = layout.load_pin_table(a.pin_table)
+    spec, problems, notes = layout.generate(spec, layout_hint, table)
+    for note in notes:
+        print("layout:", note)
+    if problems:
+        print("LAYOUT PROBLEMS:")
+        for problem in problems:
+            print("  ", problem)
+        return 1
+    text = textspec.dumps(spec, base=os.path.dirname(os.path.abspath(a.output)))
+    _atomic_write(a.output, text)
+    print(f"layout spec -> {a.output}  parts={len(spec['parts'])} nets={len(spec['nets'])} wires={len(spec['wires'])}")
+    print("next:", f'"<ADS>\\tools\\python\\python.exe" -B -m adstk build "{a.output}" '
+                   '--reference <reference.log> --netlist-out <built.log>')
+    return 0
+
+
 def _atomic_write(path, text):
     target = os.path.abspath(path)
     fd, temporary = tempfile.mkstemp(prefix=".adstk_", dir=os.path.dirname(target), text=True)
@@ -207,6 +230,12 @@ def main(argv=None):
     p.add_argument("--outdir", help="root dir for per-combo sim outputs")
     p.add_argument("--timeout", type=float, default=600, help="per-combo timeout in seconds")
     p.set_defaults(fn=cmd_sweep)
+
+    p = sub.add_parser("layout", help="generate v1 geometry from a simplified layout plan")
+    p.add_argument("plan", help="simplified .plan.txt file")
+    p.add_argument("output", help="generated v1 .txt file")
+    p.add_argument("--pin-table", help="override templates/device_pin_table.json")
+    p.set_defaults(fn=cmd_layout)
 
     p = sub.add_parser("convert", help="convert between JSON and fixed Chinese text spec v1")
     p.add_argument("input", help="input .json or text spec")

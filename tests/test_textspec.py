@@ -7,7 +7,7 @@ from adstk import build, textspec
 from adstk.__main__ import main
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-EXAMPLE = os.path.join(ROOT, "examples", "specs", "rectB_circuit.txt")
+EXAMPLE = os.path.join(ROOT, "examples", "specs", "demo_circuit.txt")
 
 MINIMAL = """版本 = 1
 
@@ -44,19 +44,19 @@ class TextSpecTests(unittest.TestCase):
 
     def test_complete_example_loads(self):
         spec = build.load_spec(EXAMPLE)
-        self.assertEqual(len(spec["parts"]), 15)
-        self.assertEqual(len(spec["nets"]), 5)
-        self.assertEqual(len(spec["wires"]), 13)
-        self.assertEqual(spec["vars"], {"pwr": "3"})
+        self.assertEqual(len(spec["parts"]), 10)
+        self.assertEqual(len(spec["nets"]), 3)
+        self.assertEqual(len(spec["wires"]), 8)
+        self.assertEqual(spec["vars"], {"pwr": "0"})
         self.assertEqual(spec["var_part"], "VAR1")
         self.assertTrue(os.path.isabs(spec["design"]["workspace"]))
-        self.assertTrue(spec["design"]["workspace"].endswith(os.path.join("3_project", "MyWorkspace_wrk")))
+        self.assertTrue(spec["design"]["workspace"].endswith(os.path.join("examples", "workspace_demo")))
 
     def test_complete_example_round_trip(self):
         loaded = build.load_spec(EXAMPLE)
         text = textspec.dumps(loaded, base=os.path.dirname(EXAMPLE))
         reparsed = textspec.parse(text)
-        self.assertEqual(reparsed["design"]["workspace"], "../../../3_project/MyWorkspace_wrk")
+        self.assertEqual(reparsed["design"]["workspace"], "../workspace_demo")
         self.assertEqual(reparsed["nets"], {net: [list(ref) for ref in refs]
                                              for net, refs in loaded["nets"].items()})
         self.assertEqual(reparsed["wires"], loaded["wires"])
@@ -70,7 +70,7 @@ class TextSpecTests(unittest.TestCase):
                 converted = json.load(fh)
             self.assertNotIn("master", converted["parts"][0])
             self.assertIsInstance(converted["nets"]["gnd"][0], list)
-            self.assertEqual(build.load_spec(output)["design"]["cell"], "rectB")
+            self.assertEqual(build.load_spec(output)["design"]["cell"], "demo_network")
 
     def test_format_errors_have_line_numbers(self):
         cases = {

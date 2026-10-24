@@ -21,14 +21,14 @@ cd /d <toolkit 根目录>
 
 | 位置 | 用途 |
 |---|---|
-| `adstk/` | 可执行内核：建模、审计、网表、仿真、PCE、文本 spec |
-| `tools/` | 从已有设计或项目脚本生成 spec 的辅助工具 |
-| `templates/` | 空白文本骨架、引脚表、最小设计配置 |
-| `examples/specs/` | 可编辑 spec 示例 |
-| `examples/evidence/` | 验证用网表日志，只读参考 |
-| `examples/sim_out/` | 一次 rectA 仿真的样例输出（本地生成，不提交） |
+| `adstk/` | 可执行内核：建模、审计、网表、仿真、PCE、文本 spec、布局 |
+| `tools/` | 从已有设计生成 spec 的辅助工具 |
+| `templates/` | 文本骨架、通用引脚表、布局计划骨架、最小设计配置 |
+| `examples/specs/` | 不含论文数值的合成 demo（plan 与 v1） |
 | `tests/` | 单元测试和回归反例 |
-| `docs/` | 详细文档 |
+| `docs/` | 使用手册、布局计划、AI 提示词 |
+
+论文专属的示例、器件引脚表、证据和结果应放在各自项目目录，不进入本仓库。
 
 ## 3. 三个核心概念
 
@@ -133,6 +133,23 @@ spec 描述一个原理图：
 
 `sim` 会删除输出目录中本次顶层单元的旧 `.ds`，防止把上次结果当成本次结果。`sweep` 每个组合一个独立目录，失败组合显示原因并使命令返回非零。
 
+### 5.4 不写坐标：简化布局计划
+
+如果不想手算坐标和连线，可以使用 `.plan.txt`：
+
+```bat
+"<ADS>\tools\python\python.exe" -B -m adstk layout my_layout.plan.txt my_spec.txt
+```
+
+布局计划与 v1 的区别：
+
+- `[器件]` 不写坐标和角度，只写 `名称 | 库 | 单元 | 参数`。
+- 不写 `[连线]`。
+- 新增 `[布局]`，按 `主链 / 对地 / 探针 / 控制器` 给器件分工。
+- GROUND 器件自动放到地总线，不列入布局分类。
+
+生成结果是完整 v1 文本，仍要跑 `build` dry、连接核对和参考网表比较。完整规则与限制见 `docs/LAYOUT_PLAN.md`。
+
 ## 6. 固定中文文本与 AI 编写
 
 ### 6.1 格式
@@ -149,11 +166,11 @@ spec 描述一个原理图：
 [选项] tahb_off / var_part / varblock / power_axis / 器件类型
 ```
 
-完整示例见 `examples/specs/rectB_circuit.txt`，空白骨架见 `templates/circuit_skeleton.txt`。
+合成示例见 `examples/specs/demo_circuit.txt`，空白骨架见 `templates/circuit_skeleton.txt`。示例中的工作区是占位路径，使用前改成自己的环境。
 
 ### 6.2 AI 两轮编写
 
-可直接把 `AI_PROMPT.md` 中的系统提示词和首次需求模板交给 AI。
+可直接把 `AI_PROMPT.md` 中的系统提示词和首次需求模板交给 AI。坐标和连线困难时，优先让 AI 写布局计划，再由 `adstk layout` 生成 v1。
 
 1. 第一轮：工程、变量、器件、参数、网络。先核对库名、引脚名、二极管方向。
 2. 第二轮：根据 `templates/device_pin_table.json` 的 R0 偏移和旋转公式计算坐标，再写连线。

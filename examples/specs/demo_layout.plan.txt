@@ -1,0 +1,36 @@
+版本 = 1
+
+[工程]
+工作区 = ../workspace_demo
+库 = demo_lib
+单元 = demo_network
+
+[变量]
+pwr = 0
+
+[器件]
+P1 | ads_sources | P_1Tone | Z=50 Ohm; P=polar(dbmtow(pwr),0); Freq=1 GHz
+GND1 | ads_rflib | GROUND |
+R1 | ads_rflib | R | R=50 Ohm
+C1 | ads_rflib | C | C=1 pF
+R2 | ads_rflib | R | R=50 Ohm
+V_IN | ads_rflib | V_Probe |
+V_OUT | ads_rflib | V_Probe |
+HB1 | ads_simulation | HarmonicBalance | Freq=1 GHz; Order=7; MaxOrder=7
+Sweep1 | ads_simulation | ParamSweep | SweepVar=pwr; Start=0; Stop=10; Step=1; SimInstanceName=HB1
+VAR1 | ads_datacmps | VAR |
+
+[网络]
+gnd = P1.P__0, GND1.P__0, C1.P__0, R2.P__0
+nsrc = P1.P__1, V_IN.P__0, R1.P__0
+nout = R1.P__1, C1.P__1, R2.P__1, V_OUT.P__0
+
+[布局]
+主链 = P1, R1
+对地 = C1, R2
+探针 = V_IN, V_OUT
+控制器 = HB1, Sweep1, VAR1
+
+[选项]
+tahb_off = true
+var_part = VAR1
