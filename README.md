@@ -3,6 +3,7 @@
 用 ADS 自带 Python 读回原理图、从 JSON/固定中文文本 spec 重建、检查连接、生成网表、调用 `hpeesofsim`，再计算 PCE。
 
 - 完整操作手册：[docs/USAGE.md](docs/USAGE.md)
+- AI 使用提示词：[docs/AI_PROMPT.md](docs/AI_PROMPT.md)
 - AI 编写材料：[templates/circuit_skeleton.txt](templates/circuit_skeleton.txt)、[templates/device_pin_table.json](templates/device_pin_table.json)、[examples/specs/rectB_circuit.txt](examples/specs/rectB_circuit.txt)
 - 示例目录说明：[examples/README.md](examples/README.md)
 
