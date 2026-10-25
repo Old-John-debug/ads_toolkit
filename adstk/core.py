@@ -9,13 +9,13 @@ import sys
 import time
 
 # library name -> path under the ADS install root (machine-specific, not project-specific)
+# vendor/project kits (e.g. HFDiode) are NOT listed here; pass them via spec["libs"].
 LIB_SUBPATHS = {
     "ads_simulation": "oalibs/rf/ads_simulation",
     "ads_rflib": "oalibs/rf/ads_rflib",
     "ads_tlines": "oalibs/rf/ads_tlines",
     "ads_datacmps": "oalibs/rf/ads_datacmps",
     "ads_sources": "oalibs/rf/ads_sources",
-    "HFDiode": "oalibs/componentLib/HFDiode_vendor_kit/HFDiode",
 }
 
 # netlist string params that must be stored WITH quotes

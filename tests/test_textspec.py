@@ -86,6 +86,19 @@ class TextSpecTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "版本|第 [0-9]+ 行"):
                     textspec.parse(text)
 
+    def test_libs_section_round_trip_and_resolution(self):
+        spec = build.load_spec(EXAMPLE)
+        spec["libs"] = {"VendorKit": "vendor"}
+        with tempfile.TemporaryDirectory() as tmp:
+            output = os.path.join(tmp, "spec.txt")
+            text = textspec.dumps(spec, base=tmp)
+            with open(output, "w", encoding="utf-8") as fh:
+                fh.write(text)
+            parsed = textspec.parse(text)
+            self.assertEqual(parsed["libs"], {"VendorKit": "vendor"})
+            loaded = build.load_spec(output)
+            self.assertEqual(loaded["libs"]["VendorKit"], os.path.join(tmp, "vendor"))
+
     def test_lossy_reserved_characters_are_rejected(self):
         spec = {"design": {"workspace": "ws", "library": "l", "cell": "c"},
                 "parts": [{"name": "R1", "lib": "ads_rflib", "cell": "R",

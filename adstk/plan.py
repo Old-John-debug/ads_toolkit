@@ -3,7 +3,7 @@ import os
 
 from .textspec import _assignment, _boolean
 
-SECTIONS = ("工程", "变量", "器件", "网络", "布局", "选项")
+SECTIONS = ("工程", "库路径", "变量", "器件", "网络", "布局", "选项")
 REQUIRED_SECTIONS = ("工程", "器件", "网络", "布局")
 LAYOUT_KEYS = ("主链", "对地", "探针", "控制器", "地网络")
 DESIGN_KEYS = {"工作区": "workspace", "库": "library", "单元": "cell"}
@@ -28,7 +28,7 @@ def _names(value, line_no):
 
 def parse(text, base_dir=None):
     """-> (spec, layout). Paths are resolved relative to base_dir."""
-    spec = {"design": {}, "parts": [], "nets": {}, "vars": {},
+    spec = {"design": {}, "libs": {}, "parts": [], "nets": {}, "vars": {},
             "var_part": None, "tahb_off": False}
     layout = {"主链": [], "对地": [], "探针": [], "控制器": [], "地网络": None}
     section = None
@@ -89,6 +89,8 @@ def parse(text, base_dir=None):
                 spec["design"][DESIGN_KEYS[key]] = value
             else:
                 raise ValueError(f"第 {line_no} 行: 未知工程字段 {key}")
+        elif section == "库路径":
+            spec["libs"][key] = value
         elif section == "变量":
             spec["vars"][key] = value
         elif section == "网络":
@@ -153,4 +155,6 @@ def parse(text, base_dir=None):
     spec["design"]["workspace"] = _resolve_path(spec["design"]["workspace"], base)
     if spec.get("ads"):
         spec["ads"] = _resolve_path(spec["ads"], base)
+    for name, path in spec["libs"].items():
+        spec["libs"][name] = _resolve_path(path, base)
     return spec, layout

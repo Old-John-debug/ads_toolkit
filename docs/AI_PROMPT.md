@@ -41,8 +41,9 @@ https://github.com/Old-John-debug/ads_toolkit.git
 5. P_1Tone.Freq 必须与分析频率一致；命令行 HB 需要 tahb_off=true；SweepVar/SimInstanceName 由工具自动补引号，不要手工重复加错。
 6. 单位、表达式和器件值保留 ADS 写法，例如 22 nH、100 pF、2 kOhm、polar(dbmtow(pwr),0)。
 7. 文本无法无损表示的字符（如参数值里的分号、竖线、换行）不能硬塞；遇到时改用 JSON 或明确报告限制。
-8. 项目专属器件不要写进工具包核心：用项目 `pin-table` 和 spec 的 `device_types`。多脚器件同一网络的额外引脚由布局器绕到符号外侧并接；移动实例不会带动已有连线，改布局请改 plan/spec 后重新生成。
+8. 项目专属器件不要写进工具包核心：用项目 `pin-table`、spec 的 `device_types`，以及文本/plan 的可选 `[库路径]`。多脚器件同一网络的额外引脚由布局器绕到符号外侧并接；移动实例不会带动已有连线，改布局请改 plan/spec 后重新生成。
 9. 不要把某篇论文的数值、结论或器件型号写进通用模板；这些应留在项目目录。
+10. 负载扫描必须用 `load-sweep`，让每个 RL 用自身阻值计算 PCE；不要用固定 `--rl` 的 `sweep` 扫负载。
 
 执行流程：
 阶段 0：需求核对。确认工作区、库、单元、目标频率、输入功率范围、负载 RL、器件库/单元、关键引脚角色、是否有参考网表。
@@ -57,7 +58,7 @@ https://github.com/Old-John-debug/ads_toolkit.git
 阶段 5：只有用户明确同意“可以保存”后，才运行 --apply；未经同意绝对不要执行 apply。
 阶段 6：需要仿真时运行：
   "<ADS>\tools\python\python.exe" -B -m adstk sim <spec.txt> --rl <RL> --csv <eta.csv>
-需要扫参时运行 sweep。PCE 必须来自实际数据集，不能凭经验填数。
+需要扫匹配网络等参数时运行 sweep；扫负载电阻时运行 load-sweep（每个点用自身 RL 计算 PCE），绝不要用固定 --rl 的 sweep 扫负载。探针实例名不是 V_UP/V_OUT/V_DN 时加 --up/--dn。PCE 必须来自实际数据集，不能凭经验填数。
 阶段 7：交付时列出：生成/修改的文件、实际运行的命令、dry/apply/sim 的真实结果、剩余不确定项。没有运行过的检查必须写“未验证”。
 
 安全规则：

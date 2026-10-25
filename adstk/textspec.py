@@ -1,7 +1,8 @@
 """Fixed Chinese text spec v1, convertible to the JSON spec dictionary."""
 import os
 
-SECTIONS = ("工程", "变量", "器件", "网络", "连线", "选项")
+SECTIONS = ("工程", "库路径", "变量", "器件", "网络", "连线", "选项")
+REQUIRED_SECTIONS = ("工程", "变量", "器件", "网络", "连线", "选项")
 DESIGN_KEYS = {"工作区": "workspace", "库": "library", "单元": "cell"}
 OPTION_KEYS = {"tahb_off", "var_part", "varblock", "power_axis", "器件类型"}
 
@@ -42,7 +43,7 @@ def _boolean(text, line_no):
 
 def parse(text):
     """Parse text spec v1. Errors include the source line number."""
-    spec = {"design": {}, "parts": [], "nets": {}, "wires": [],
+    spec = {"design": {}, "libs": {}, "parts": [], "nets": {}, "wires": [],
             "vars": {}, "var_part": None, "tahb_off": False}
     section = None
     seen_sections = set()
@@ -117,6 +118,10 @@ def parse(text):
                 spec["design"][DESIGN_KEYS[key]] = value
             else:
                 _fail(line_no, f"未知工程字段 {key}")
+        elif section == "库路径":
+            if key in spec["libs"]:
+                _fail(line_no, f"库路径 {key} 重复")
+            spec["libs"][key] = value
         elif section == "变量":
             if key in spec["vars"]:
                 _fail(line_no, f"变量 {key} 重复")
@@ -166,7 +171,7 @@ def parse(text):
 
     if not version:
         raise ValueError("缺少文件头: 版本 = 1")
-    missing = [name for name in SECTIONS if name not in seen_sections]
+    missing = [name for name in REQUIRED_SECTIONS if name not in seen_sections]
     if missing:
         raise ValueError(f"缺少区段: {', '.join(missing)}")
     for key in ("workspace", "library", "cell"):
@@ -212,7 +217,7 @@ def _portable_path(path, base):
     return path
 
 
-def _canonical(spec):
+def _canonical(spec, base=None):
     parts = []
     for part in spec["parts"]:
         params = {str(k): str(v) for k, v in part.get("params", {}).items()
@@ -232,13 +237,12 @@ def _canonical(spec):
         "varblock": spec.get("varblock"),
         "power_axis": spec.get("power_axis"),
         "device_types": list(spec["device_types"]) if spec.get("device_types") else None,
+        "libs": {str(k): _portable_path(v, base) for k, v in spec.get("libs", {}).items()},
     }
 
 
 def dumps(spec, base=None):
     """Convert a spec dictionary to text v1; base makes paths relative."""
-    if spec.get("libs"):
-        raise ValueError("文本 v1 暂不支持 libs；请使用 JSON spec 或先移入库路径配置")
     lines = ["版本 = 1", "", "[工程]"]
     design = spec["design"]
     lines.append(f"工作区 = {_portable_path(design['workspace'], base)}")
@@ -246,6 +250,10 @@ def dumps(spec, base=None):
     lines.append(f"单元 = {design['cell']}")
     if spec.get("ads"):
         lines.append(f"ADS路径 = {_portable_path(spec['ads'], base)}")
+    if spec.get("libs"):
+        lines.extend(["", "[库路径]"])
+        for name, path in spec["libs"].items():
+            lines.append(f"{name} = {_portable_path(path, base)}")
     lines.extend(["", "[变量]"])
     for key, value in spec.get("vars", {}).items():
         lines.append(f"{key} = {value}")
@@ -276,6 +284,6 @@ def dumps(spec, base=None):
         lines.append("器件类型 = " + ", ".join(spec["device_types"]))
     text = "\n".join(lines) + "\n"
     reparsed = parse(text)
-    if _canonical(spec) != _canonical(reparsed):
+    if _canonical(spec, base) != _canonical(reparsed, base):
         raise ValueError("文本 v1 无法无损表示该 spec；请检查 ;、|、换行等保留字符")
     return text

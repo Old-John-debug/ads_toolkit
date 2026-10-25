@@ -1,5 +1,4 @@
 import json
-import json
 import os
 import sys
 import tempfile
@@ -58,6 +57,13 @@ class LayoutPlanTests(unittest.TestCase):
         with open(self.PLAN, encoding="utf-8") as fh:
             spec, hint = plan.parse(fh.read(), base_dir=os.path.dirname(self.PLAN))
         return layout.generate(spec, hint, layout.load_pin_table())
+
+    def test_plan_libs_paths_resolve(self):
+        with open(self.PLAN, encoding="utf-8") as fh:
+            text = fh.read().replace("[变量]", "[库路径]\nVendorKit = vendor\n\n[变量]", 1)
+        with tempfile.TemporaryDirectory() as tmp:
+            spec, _hint = plan.parse(text, base_dir=tmp)
+        self.assertEqual(spec["libs"]["VendorKit"], os.path.join(tmp, "vendor"))
 
     def test_plan_generates_audit_clean_v1(self):
         spec, problems, _ = self._generate()
@@ -582,6 +588,139 @@ class BuildTests(unittest.TestCase):
         result, design, _ = self._run_build(dry=True, equivalent=True)
         self.assertTrue(result["ok"])
         self.assertEqual(design.saved, 0)
+
+
+class ReviewRegressionTests(unittest.TestCase):
+    """Regressions for the 2026-10 independent review findings."""
+
+    ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    def test_ground_island_split_signal_net_backstop(self):
+        # Intent: P1 -> R1 -> R2 -> RL, but n_out (between R1 and R2) is drawn
+        # as two islands, each with its own GROUND. The geometric audit allows
+        # grounded islands, so it passes; the spec/netlist connectivity gate
+        # must reject it (all pins merge onto node 0 in the real netlist).
+        nets = {
+            "ngnd":  [("P1", "P__0"), ("RL", "P__1"), ("GND3", "P__0")],
+            "nsrc":  [("P1", "P__1"), ("R1", "P__0")],
+            "n_out": [("R1", "P__1"), ("R2", "P__0"), ("GND1", "P__0"), ("GND2", "P__0")],
+            "nload": [("R2", "P__1"), ("RL", "P__0")],
+        }
+        wires = [("ngnd", [(0, 0), (1, 0)]), ("nsrc", [(2, 0), (3, 0)]),
+                 ("n_out", [(4, 0), (5, 0)]), ("n_out", [(8, 0), (9, 0)]),
+                 ("nload", [(10, 0), (11, 0)])]
+        pins = {("P1", "P__0"): (0, 0), ("RL", "P__1"): (1, 0), ("GND3", "P__0"): (0.5, 0),
+                ("P1", "P__1"): (2, 0), ("R1", "P__0"): (3, 0),
+                ("R1", "P__1"): (4, 0), ("GND1", "P__0"): (5, 0),
+                ("R2", "P__0"): (9, 0), ("GND2", "P__0"): (8, 0),
+                ("R2", "P__1"): (10, 0), ("RL", "P__0"): (11, 0)}
+        grounds = {("GND1", "P__0"), ("GND2", "P__0"), ("GND3", "P__0")}
+        problems, _ = audit.audit(nets, wires, pins, ground_refs=grounds)
+        self.assertEqual(problems, [])
+
+        p_master = ("ads_sources", "P_1Tone", "symbol")
+        r_master = ("ads_rflib", "R", "symbol")
+        g_master = ("ads_rflib", "GROUND", "symbol")
+        spec = {"parts": [
+                {"name": "P1", "cell": "P_1Tone", "master": p_master},
+                {"name": "R1", "cell": "R", "master": r_master},
+                {"name": "R2", "cell": "R", "master": r_master},
+                {"name": "RL", "cell": "R", "master": r_master},
+                {"name": "GND1", "cell": "GROUND", "master": g_master},
+                {"name": "GND2", "cell": "GROUND", "master": g_master},
+                {"name": "GND3", "cell": "GROUND", "master": g_master}],
+                "nets": {k: [list(r) for r in v] for k, v in nets.items()}}
+        pin_indices = {p_master: {"P__0": 0, "P__1": 1}, r_master: {"P__0": 0, "P__1": 1}}
+        # every grounded pin lands on node 0: R1.P__1, R2.P__0, RL.P__1, P1.P__0
+        netlist = ("R:R1 1 0 R=50 Ohm\nR:R2 0 2 R=50 Ohm\nR:RL 2 0 R=50 Ohm\n"
+                   "Port:P1 0 1 Num=1 Z=50\n")
+        self.assertFalse(netlistx.compare_spec_connectivity(
+            spec, pin_indices, netlist, log=lambda *a: None))
+
+    def test_auto_plan_normalization_is_narrow(self):
+        auto_plan = "SweepPlan: HB1_stim Start=1 Stop=10 Step=1\n"
+        auto_hb = 'HB:HB1 Freq[1]=1 GHz SweepVar="" SweepPlan="HB1_stim"\n'
+        real_plan_hb = 'HB:HB1 Freq[1]=1 GHz SweepVar="pwr" SweepPlan="HB1_stim"\n'
+        real_plan = "SweepPlan:HB1_stim Start=1 Stop=20 Step=1\n"
+        quiet = lambda *a: None  # noqa: E731
+        # a purely auto-generated plan that disappears is normalised away
+        self.assertTrue(netlistx.equivalent(auto_hb + auto_plan, auto_hb, log=quiet))
+        # a real sweep plan disappearing is NOT equivalent
+        self.assertFalse(netlistx.equivalent(real_plan_hb + real_plan, real_plan_hb, log=quiet))
+        # exact collision with the auto-plan signature: a real plan named
+        # HB1_stim Start=1 Stop=10 must still count when SweepVar is non-empty
+        exact_real = "SweepPlan: HB1_stim Start=1 Stop=10 Step=1\n"
+        self.assertFalse(netlistx.equivalent(real_plan_hb + exact_real, real_plan_hb, log=quiet))
+        # a real SweepVar reference disappearing is NOT equivalent
+        self.assertFalse(netlistx.equivalent(real_plan_hb + auto_plan, auto_hb + auto_plan,
+                                             log=quiet))
+
+    def test_sweep_uses_fixed_rl_for_every_point(self):
+        spec = {"ads": "ADS", "parts": [{"name": "RL", "params": {}}]}
+        seen_rl = []
+
+        def fake_eta(_ds, rl, **_kw):
+            seen_rl.append(rl)
+            return [(0.0, 1.0, 10.0)]
+
+        with mock.patch("adstk.build.build", return_value={"problems": [], "netlist": "x"}), \
+                mock.patch("adstk.sim.run_netlist", return_value=(True, "ds", "")), \
+                mock.patch("adstk.core.ads_root", return_value="ADS"), \
+                mock.patch("adstk.results.eta_curve", side_effect=fake_eta):
+            rows = sweep.sweep(spec, "RL", "R", ["200", "1000"], 550, "out")
+        # documented semantics: one fixed rl for all points, so sweeping the
+        # load resistance itself would silently give wrong PCE values
+        self.assertEqual(seen_rl, [550, 550])
+        self.assertEqual([r[0] for r in rows], ["200", "1000"])
+
+    def test_load_sweep_uses_each_load_as_pce_rl(self):
+        spec = {"ads": "ADS", "parts": [{"name": "R1", "params": {}}]}
+        seen = []
+
+        def fake_eta(_ds, rl, **_kw):
+            seen.append(rl)
+            return [(21.0, 2.0, 70.0)]
+
+        with mock.patch("adstk.build.build", return_value={"problems": [], "netlist": "x"}), \
+                mock.patch("adstk.sim.run_netlist", return_value=(True, "ds", "")), \
+                mock.patch("adstk.core.ads_root", return_value="ADS"), \
+                mock.patch("adstk.results.eta_curve", side_effect=fake_eta):
+            rows = sweep.load_sweep(spec, "R1", "R", ["50", "75"], "out", pwr=21)
+        self.assertEqual(seen, [50.0, 75.0])
+        self.assertEqual([(r[0], r[2], r[3]) for r in rows],
+                         [("50", 70.0, 21.0), ("75", 70.0, 21.0)])
+
+    def test_extra_device_pin_fails_spec_connectivity(self):
+        r_master = ("ads_rflib", "R", "symbol")
+        spec = {"parts": [{"name": "R1", "cell": "R", "master": r_master},
+                          {"name": "R2", "cell": "R", "master": r_master}],
+                "nets": {"a": [["R1", "P__0"], ["R2", "P__0"]],
+                         "b": [["R1", "P__1"], ["R2", "P__1"]]}}
+        pin_indices = {r_master: {"P__0": 0, "P__1": 1}}
+        good = "R:R1 N1 N2\nR:R2 N1 N2\n"
+        self.assertTrue(netlistx.compare_spec_connectivity(
+            spec, pin_indices, good, log=lambda *a: None))
+        # an extra capacitor on R2's net adds pins the spec does not know
+        bad = "R:R1 N1 N2\nR:R2 N1 N3\nC:C1 N3 0\n"
+        self.assertFalse(netlistx.compare_spec_connectivity(
+            spec, pin_indices, bad, log=lambda *a: None))
+
+    def test_cli_reports_friendly_errors_without_traceback(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            spec_path = os.path.join(tmp, "spec.json")
+            with open(spec_path, "w", encoding="utf-8") as fh:
+                json.dump({"design": {"workspace": "ws", "library": "lib", "cell": "cell"},
+                           "parts": [{"name": "R1", "lib": "l", "cell": "R", "origin": [0, 0]}],
+                           "nets": {}, "wires": []}, fh)
+            # a lock error (RuntimeError) must print ERROR, not a traceback
+            with mock.patch("adstk.build.build", side_effect=RuntimeError("ADS GUI holds a lock")):
+                self.assertEqual(main(["build", spec_path]), 2)
+        # layout into a not-yet-existing output directory creates it instead of crashing
+        plan = os.path.join(self.ROOT, "examples", "specs", "demo_layout.plan.txt")
+        with tempfile.TemporaryDirectory() as tmp:
+            output = os.path.join(tmp, "new_dir", "out.txt")
+            self.assertEqual(main(["layout", plan, output]), 0)
+            self.assertTrue(os.path.isfile(output))
 
 
 if __name__ == "__main__":

@@ -72,8 +72,9 @@ def cmd_sim(a):
     if rl <= 0:
         print("need --rl (positive load resistance)")
         return 1
-    rows = results.eta_curve(ds, rl, varblock=a.varblock or spec.get("varblock"),
-                             power_axis=a.power_axis)
+    rows = results.eta_curve(ds, rl, up=a.up, dn=a.dn,
+                             varblock=a.varblock or spec.get("varblock"),
+                             power_axis=a.power_axis or spec.get("power_axis") or "pwr")
     if rows is None:
         print("eta vectors missing in dataset")
         return 1
@@ -89,7 +90,8 @@ def cmd_sim(a):
 
 def cmd_report(a):
     from . import results
-    rows = results.eta_curve(a.ds, a.rl, varblock=a.varblock, power_axis=a.power_axis)
+    rows = results.eta_curve(a.ds, a.rl, up=a.up, dn=a.dn,
+                             varblock=a.varblock, power_axis=a.power_axis)
     if rows is None:
         print("eta vectors missing in dataset")
         return 1
@@ -109,9 +111,11 @@ def cmd_sweep(a):
     spec = B.load_spec(a.spec)
     values = [v.strip() for v in a.values.split(",") if v.strip()]
     outdir = a.outdir or os.path.join(os.path.dirname(os.path.abspath(a.spec)), "sweep_out")
+    print(f"sweeping {a.part}.{a.param}; eta uses the fixed --rl {a.rl} for EVERY point "
+          "(do not sweep the load resistor itself)")
     errors = []
     rows = S.sweep(spec, a.part, a.param, values, a.rl, outdir, pwr=a.pwr,
-                   timeout=a.timeout, errors=errors)
+                   timeout=a.timeout, errors=errors, up=a.up, dn=a.dn)
     for v, eta, p in rows:
         if eta is None:
             print(f"  {v:>10s}  FAILED")
@@ -122,6 +126,35 @@ def cmd_sweep(a):
     best = max((r for r in rows if r[1] is not None), key=lambda r: r[1], default=None)
     if best:
         print("best:", best)
+    return 1 if errors else 0
+
+
+def cmd_load_sweep(a):
+    from . import build as B, sweep as S
+    import csv
+
+    spec = B.load_spec(a.spec)
+    values = [v.strip() for v in a.values.split(",") if v.strip()]
+    outdir = a.outdir or os.path.join(os.path.dirname(os.path.abspath(a.spec)), "load_sweep_out")
+    print(f"load sweep {a.part}.{a.param}; each point uses its own load as PCE RL")
+    errors = []
+    rows = S.load_sweep(spec, a.part, a.param, values, outdir, pwr=a.pwr,
+                        timeout=a.timeout, errors=errors, up=a.up, dn=a.dn)
+    for value, vdc, eta, power in rows:
+        if eta is None:
+            print(f"  RL={value:>10s}  FAILED")
+        else:
+            print(f"  RL={value:>10s}  Vdc={vdc:8.4f} V  eta={eta:6.2f}% @ {power:.0f} dBm")
+    for value, message in errors:
+        print(f"  {value}: {message}", file=sys.stderr)
+    if a.csv:
+        with open(a.csv, "w", newline="", encoding="utf-8") as fh:
+            writer = csv.writer(fh)
+            writer.writerow(("RL", "vdc", "eta_pct", "pwr_dBm"))
+            for row in rows:
+                writer.writerow(["" if x is None else f"{x:.6g}" if isinstance(x, float) else x
+                                 for x in row])
+        print("csv ->", a.csv)
     return 1 if errors else 0
 
 
@@ -150,6 +183,7 @@ def cmd_layout(a):
 
 def _atomic_write(path, text):
     target = os.path.abspath(path)
+    os.makedirs(os.path.dirname(target), exist_ok=True)
     fd, temporary = tempfile.mkstemp(prefix=".adstk_", dir=os.path.dirname(target), text=True)
     try:
         with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as fh:
@@ -205,7 +239,10 @@ def main(argv=None):
     p.add_argument("--outdir", help="simulation working directory")
     p.add_argument("--rl", type=float, help="load resistance for eta")
     p.add_argument("--varblock", help="dataset varblock when automatic selection is ambiguous")
-    p.add_argument("--power-axis", default="pwr", help="index name of the swept input power")
+    p.add_argument("--power-axis", default=None,
+                   help="index name of the swept input power (default: spec power_axis or 'pwr')")
+    p.add_argument("--up", help="voltage probe column for the top rail (default: V_UP.net or V_OUT.net)")
+    p.add_argument("--dn", help="voltage probe column for the bottom rail (default: 0 for single-ended)")
     p.add_argument("--timeout", type=float, default=600, help="hpeesofsim timeout in seconds")
     p.add_argument("--csv")
     p.add_argument("--png")
@@ -216,6 +253,8 @@ def main(argv=None):
     p.add_argument("--rl", type=float, required=True)
     p.add_argument("--varblock", help="dataset varblock when automatic selection is ambiguous")
     p.add_argument("--power-axis", default="pwr", help="index name of the swept input power")
+    p.add_argument("--up", help="voltage probe column for the top rail (default: V_UP.net or V_OUT.net)")
+    p.add_argument("--dn", help="voltage probe column for the bottom rail (default: 0 for single-ended)")
     p.add_argument("--csv")
     p.add_argument("--png")
     p.set_defaults(fn=cmd_report)
@@ -229,7 +268,22 @@ def main(argv=None):
     p.add_argument("--pwr", type=float, help="evaluate eta at this exact input power")
     p.add_argument("--outdir", help="root dir for per-combo sim outputs")
     p.add_argument("--timeout", type=float, default=600, help="per-combo timeout in seconds")
+    p.add_argument("--up", help="voltage probe column for the top rail (default: V_UP.net or V_OUT.net)")
+    p.add_argument("--dn", help="voltage probe column for the bottom rail (default: 0 for single-ended)")
     p.set_defaults(fn=cmd_sweep)
+
+    p = sub.add_parser("load-sweep", help="sweep a load and use each value as RL in PCE")
+    p.add_argument("spec")
+    p.add_argument("--part", required=True, help="load part name, e.g. R1")
+    p.add_argument("--param", default="R", help="load parameter name (default: R)")
+    p.add_argument("--values", required=True, help="comma separated positive load values")
+    p.add_argument("--pwr", type=float, required=True, help="evaluate eta at this exact input power")
+    p.add_argument("--outdir", help="root dir for per-load sim outputs")
+    p.add_argument("--timeout", type=float, default=600, help="per-load timeout in seconds")
+    p.add_argument("--up", help="voltage probe column for the top rail (default: V_UP.net or V_OUT.net)")
+    p.add_argument("--dn", help="voltage probe column for the bottom rail (default: 0 for single-ended)")
+    p.add_argument("--csv", help="write load sweep CSV")
+    p.set_defaults(fn=cmd_load_sweep)
 
     p = sub.add_parser("layout", help="generate v1 geometry from a simplified layout plan")
     p.add_argument("plan", help="simplified .plan.txt file")
@@ -245,7 +299,7 @@ def main(argv=None):
     a = ap.parse_args(argv)
     try:
         return a.fn(a)
-    except ValueError as e:
+    except (ValueError, RuntimeError, OSError) as e:
         print(f"ERROR: {e}", file=sys.stderr)
         return 2
 

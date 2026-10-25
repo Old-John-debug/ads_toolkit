@@ -13,8 +13,13 @@ def _value_tag(value):
     return f"v_{readable}_{digest}"
 
 
-def sweep(spec, part_name, param, values, rl, outroot, pwr=None, timeout=600, errors=None):
-    """-> [(value, eta_pct, pwr_dBm)]; failed combinations have None metrics."""
+def sweep(spec, part_name, param, values, rl, outroot, pwr=None, timeout=600, errors=None,
+          up=None, dn=None):
+    """-> [(value, eta_pct, pwr_dBm)]; failed combinations have None metrics.
+
+    rl is fixed for every swept point: sweeping the load resistance itself
+    would compute every PCE with one single rl, so pass another parameter.
+    """
     from . import build, sim, results, core
 
     values = list(values)
@@ -50,7 +55,7 @@ def sweep(spec, part_name, param, values, rl, outroot, pwr=None, timeout=600, er
             fail(v, tail or "simulation produced no dataset")
             continue
         try:
-            curve = results.eta_curve(ds, rl, varblock=s.get("varblock"),
+            curve = results.eta_curve(ds, rl, up=up, dn=dn, varblock=s.get("varblock"),
                                       power_axis=s.get("power_axis", "pwr"))
         except ValueError as e:
             fail(v, str(e))
@@ -67,4 +72,68 @@ def sweep(spec, part_name, param, values, rl, outroot, pwr=None, timeout=600, er
         else:
             pt = max(curve, key=lambda r: r[2])
         rows.append((v, pt[2], pt[0]))
+    return rows
+
+
+def load_sweep(spec, part_name, param, values, outroot, pwr=None, timeout=600,
+               errors=None, up=None, dn=None):
+    """Sweep a load value and use that same value as RL in the PCE formula.
+
+    Returned rows: (value, vdc, eta_pct, pwr_dBm); failed rows have None metrics.
+    """
+    from . import build, sim, results, core
+
+    values = list(values)
+    if not values:
+        raise ValueError("load sweep values must not be empty")
+    if not any(p["name"] == part_name for p in spec["parts"]):
+        raise ValueError(f"part {part_name} not in spec")
+    rows = []
+
+    def fail(value, message):
+        rows.append((value, None, None, None))
+        if errors is not None:
+            errors.append((value, message))
+
+    for raw in values:
+        try:
+            rl = float(raw)
+        except (TypeError, ValueError):
+            fail(raw, f"load value is not numeric: {raw!r}")
+            continue
+        if not math.isfinite(rl) or rl <= 0:
+            fail(raw, f"load resistance must be finite and positive: {raw!r}")
+            continue
+        s = copy.deepcopy(spec)
+        for part in s["parts"]:
+            if part["name"] == part_name:
+                part.setdefault("params", {})[param] = str(raw)
+        res = build.build(s, dry=True, verbose=False)
+        if res["problems"] or not res.get("netlist"):
+            fail(raw, "; ".join(res["problems"]) or "build produced no netlist")
+            continue
+        outdir = os.path.join(outroot, f"{part_name}_{param}_{_value_tag(raw)}")
+        ads = core.ads_root(s)
+        ok, ds, tail = sim.run_netlist(res["netlist"], outdir, ads, timeout=timeout)
+        if not ok or not ds:
+            fail(raw, tail or "simulation produced no dataset")
+            continue
+        try:
+            curve = results.eta_curve(ds, rl, up=up, dn=dn, varblock=s.get("varblock"),
+                                      power_axis=s.get("power_axis", "pwr"))
+        except ValueError as e:
+            fail(raw, str(e))
+            continue
+        if not curve:
+            fail(raw, "output probe or PCE curve missing")
+            continue
+        if pwr is not None:
+            matches = [row for row in curve if abs(row[0] - pwr) < 1e-9]
+            if not matches:
+                fail(raw, f"power {pwr} dBm not in sweep; available: {[row[0] for row in curve]}")
+                continue
+            pt = matches[0]
+        else:
+            pt = max(curve, key=lambda row: row[2])
+        rows.append((raw, pt[1], pt[2], pt[0]))
     return rows

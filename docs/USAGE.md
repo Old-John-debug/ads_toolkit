@@ -129,9 +129,12 @@ spec 描述一个原理图：
 ```bat
 "<ADS>\tools\python\python.exe" -B -m adstk sim my_spec.json --rl 550 --csv eta.csv
 "<ADS>\tools\python\python.exe" -B -m adstk sweep my_spec.json --part L2 --param L --values "22 nH,30 nH,36 nH" --rl 2000
+"<ADS>\tools\python\python.exe" -B -m adstk load-sweep my_spec.json --part R1 --param R --values "30,35,40,45,50,55,60,65,70" --pwr 21
 ```
 
 `sim` 会删除输出目录中本次顶层单元的旧 `.ds`，防止把上次结果当成本次结果。`sweep` 每个组合一个独立目录，失败组合显示原因并使命令返回非零。
+
+**`sweep` 的 `--rl` 对所有扫点固定**：它只改变被扫器件参数，不改变 PCE 公式里的负载。扫负载电阻请用 `load-sweep`；它会让每个负载点用自身阻值作为 RL 计算 PCE。`sweep` 只用于匹配电感/电容等非负载参数。
 
 ### 5.4 不写坐标：简化布局计划
 
@@ -154,17 +157,20 @@ spec 描述一个原理图：
 
 ### 6.1 格式
 
-固定六段：
+固定六段，另可选 `[库路径]`：
 
 ```text
 版本 = 1
 [工程] 工作区 / 库 / 单元，可选 ADS路径
+[库路径] 可选；库名 = 路径，用于厂商/项目库
 [变量] 变量 = 值
 [器件] 名称 | 库 | 单元 | (x,y) | 角度 | 参数1=值; 参数2=值
 [网络] 网络名 = 器件.引脚, 器件.引脚
 [连线] 网络名 = (x1,y1) -> (x2,y2)
 [选项] tahb_off / var_part / varblock / power_axis / 器件类型
 ```
+
+布局计划也支持可选 `[库路径]`；这样厂商器件不需要退回 JSON。
 
 合成示例见 `examples/specs/demo_circuit.txt`，空白骨架见 `templates/circuit_skeleton.txt`。示例中的工作区是占位路径，使用前改成自己的环境。
 
@@ -182,7 +188,7 @@ spec 描述一个原理图：
 
 ### 6.3 常见易错点
 
-- 二极管是三脚模型：本工具示例中 `P__0/P__2` 同节点、`P__1` 为另一端；方向仍要按模型核对。
+- 二极管方向和三脚封装的引脚接法（哪两个脚同节点）必须按项目引脚表和模型核对，不要凭引脚名称猜测。
 - `V_Probe` 和 `GROUND` 是单脚器件，不要按两端器件连线。
 - `P_1Tone.Freq` 必须等于分析频率。
 - HB、ParamSweep、VAR 也是 `[器件]`，需要明确列出。
@@ -223,9 +229,11 @@ Pin_W = 10^(pwr_dBm/10) / 1000
 ```
 
 - `--rl` 是负载电阻，不是匹配阻抗。
-- 默认功率轴名必须是 `pwr`；其他名称用 `--power-axis`。
+- 功率轴名称：spec `power_axis` 或 `--power-axis`（CLI 优先），默认 `pwr`。
+- 探针实例名不是 `V_UP`/`V_OUT`/`V_DN` 时，用 `--up` / `--dn` 指定数据集列名；`sweep`/`load-sweep` 也支持这两个参数。
 - 数据集有多个 varblock 时用 `--varblock`。
 - 缺少 `V_UP` 对应的 `V_DN`、缺少 DC 点、负载非有限值都会报错。
+- 负载扫描用 `adstk load-sweep`，每个点用自身阻值作为 RL；不要用固定 `--rl` 的 `sweep` 扫负载。
 
 只处理已有数据集：
 
@@ -238,8 +246,8 @@ Pin_W = 10^(pwr_dBm/10) / 1000
 需要修改：
 
 1. spec 的 `design.workspace/library/cell`。
-2. 非标准库用 `libs` 指定路径。
-3. 新器件类型加入 `device_types`，否则网表比较会保守地判不等价，readback 会提示未检查。
+2. 非标准库和厂商器件套件（如 HFDiode vendor kit）用 `libs`（JSON）或 `[库路径]`（文本/plan）指定路径。
+3. 新器件类型加入 `device_types`（JSON）或 `[选项] 器件类型 = ...`（文本/plan），否则网表比较会保守地判不等价，readback 会提示未检查。
 4. ADS 安装位置用 `ADS_PATH` 或 spec `ads`。
 5. 工作区里 `lib.defs` 的厂商库引用。
 

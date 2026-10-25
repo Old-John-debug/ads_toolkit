@@ -12,6 +12,7 @@
 - 不需要 `[连线]`。
 - 新增 `[布局]`，写器件角色。
 - GROUND 器件自动放到地总线上，不需要列在布局分类中。
+- 可选 `[库路径]`，用于厂商/项目库。
 
 骨架：`templates/layout_plan_skeleton.txt`  
 合成示例：`examples/specs/demo_layout.plan.txt`

@@ -103,9 +103,17 @@ AUTO_PLAN_HB_RE = re.compile(r'\s*SweepVar=""\s+SweepPlan="[A-Za-z0-9_]+_stim"')
 
 
 def controller_lines(text):
+    lines = _logical_lines(text)
+    auto_names = set()
+    for line in lines:
+        if line.startswith("HB:"):
+            match = re.search(r'SweepVar=""\s+SweepPlan="([A-Za-z0-9_]+_stim)"', line)
+            if match:
+                auto_names.add(match.group(1))
     out = Counter()
-    for line in _logical_lines(text):
-        if AUTO_PLAN_RE.match(line):
+    for line in lines:
+        plan = AUTO_PLAN_RE.match(line)
+        if plan and line.split()[1] in auto_names:
             continue
         line = AUTO_PLAN_HB_RE.sub("", line)
         if line.startswith(CTRL_PREFIX) or VAR_RE.match(line):
@@ -115,8 +123,12 @@ def controller_lines(text):
 
 def compare_netlists(old_text, new_text, log=print, device_types=None):
     """True only when known topology and all remaining netlist content match."""
-    od, oi, oo = parse_netlist(old_text, device_types)
-    nd, ni, no = parse_netlist(new_text, device_types)
+    try:
+        od, oi, oo = parse_netlist(old_text, device_types)
+        nd, ni, no = parse_netlist(new_text, device_types)
+    except ValueError as e:
+        log(f"NETLIST PARSE ERROR (treated as not equivalent): {e}")
+        return False
     log(f"old: {len(od)} devices / {len(oi)} nets     new: {len(nd)} devices / {len(ni)} nets")
     old_opaque, new_opaque = Counter(oo), Counter(no)
     missing = sorted((old_opaque - new_opaque).elements())
