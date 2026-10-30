@@ -4,6 +4,7 @@ Everything here is config-driven: paths come from a spec dict / environment,
 never hard-coded, so the same code serves any ADS project on this machine.
 """
 import os
+import glob
 import shutil
 import sys
 import time
@@ -25,6 +26,14 @@ TOL = 1e-4
 
 
 def ads_root(spec=None):
+    """Resolve the ADS install root.
+
+    Accepts a spec dict (uses spec["ads"]), a plain path string (setup_env and
+    similar callers pass spec.get("ads") directly), or None (falls back to
+    ADS_PATH/HPEESOF_DIR/COMPL_DIR, then infers from the running Python path).
+    """
+    if isinstance(spec, (str, os.PathLike)):
+        return os.path.abspath(os.path.expandvars(os.path.expanduser(str(spec))))
     if spec and spec.get("ads"):
         return os.path.abspath(os.path.expandvars(os.path.expanduser(spec["ads"])))
     for var in ("ADS_PATH", "HPEESOF_DIR", "COMPL_DIR"):
@@ -57,12 +66,49 @@ def lib_paths(spec=None):
     return paths
 
 
-def open_libraries(de, spec=None):
+def resolve_path(value, base):
+    """Expand env/user vars and make a spec path absolute relative to base."""
+    value = os.path.expandvars(os.path.expanduser(str(value)))
+    if os.path.isabs(value):
+        return os.path.normpath(value)
+    return os.path.normpath(os.path.join(base, value))
+
+
+def sim_path_dirs(ads):
+    """Directories to prepend to PATH when spawning hpeesofsim.
+
+    Observed on ADS 2024 Update 2: hpeesofsim.exe aborts at startup with
+    STATUS_DLL_NOT_FOUND (0xC0000135) unless helper DLLs that live outside
+    <ADS>/bin (e.g. ptgem.dll, python310.dll) are reachable via PATH.
+    """
+    dirs = [os.path.join(ads, "bin"),
+            os.path.join(ads, "adsptolemy", "lib.win32_64")]
+    dirs += sorted(glob.glob(os.path.join(ads, "fem", "*", "win32_64", "bin")))
+    return [d for d in dirs if os.path.isdir(d)]
+
+
+def repeated_params(inst):
+    """{name: param} for parameters whose value is a repeatable list.
+
+    ADS 2024 defines some parameters (e.g. ParamSweep's SimInstanceName) as
+    repeated parameters with no plain string_value; callers should set
+    get_repeat(0).string_value instead.
+    """
+    m = {}
+    for p in list(inst._impl.parameters):
+        if hasattr(p, "number_of_repeats"):
+            m.setdefault(getattr(p, "name", ""), p)
+    return m
+
+
+def open_libraries(de, spec=None, on_error=None):
+    """Open every configured library read-only; report failures via callback."""
     for name, path in lib_paths(spec).items():
         try:
             de.Library.open(name, path, de.LibraryMode.READ_ONLY)
         except Exception as e:  # noqa: BLE001
-            print(f"  [libs] {name}: {e!r}")
+            if on_error is not None:
+                on_error(name, e)
 
 
 def cell_dir(ws_path, lib, cell):
@@ -87,15 +133,6 @@ def backup(path):
     return dst
 
 
-def open_design(de, spec):
-    """APPEND only - WRITE returns an empty design and saving it wipes the schematic."""
-    from keysight.ads.de.db import DesignMode
-    ws = de.Workspace(spec["workspace"])
-    ws.open()
-    d = ws.design((spec["library"], spec["cell"], "schematic"), DesignMode.APPEND)
-    return ws, d
-
-
 # ---------------------------------------------------------------- params ----
 def walk(items):
     for p in items:
@@ -114,31 +151,6 @@ def smap(inst):
         if hasattr(p, "string_value"):
             m.setdefault(getattr(p, "name", ""), p)
     return m
-
-
-def set_params(inst, params):
-    """params: {name: value}; QUOTE_PARAMS are auto-quoted if not already."""
-    m = smap(inst)
-    missing = []
-    for name, val in (params or {}).items():
-        val = str(val)
-        if name in QUOTE_PARAMS and not val.startswith('"'):
-            val = f'"{val}"'
-        if name in m:
-            m[name].string_value = val
-        else:
-            missing.append(name)
-    return missing
-
-
-def set_vars(inst, variables):
-    v = inst.vars
-    for k, val in (variables or {}).items():
-        v[k] = str(val)
-    for k in list(v):
-        if k not in (variables or {}):
-            del v[k]
-    return dict(v)
 
 
 def set_tahb_off(inst):

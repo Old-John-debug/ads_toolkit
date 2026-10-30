@@ -5,6 +5,7 @@
 ## 1. 适用环境
 
 - 目前只在 **ADS 2025 Update 2 + Windows** 实测，其他 ADS 版本和其他电脑尚未验证。
+- 本机副本（Windows + ADS 2024 Update 2）已做本地适配（4 个补丁）并实测通过，见 `docs/LOCAL_ADAPTATION.md`。
 - 使用 ADS 自带 Python：`<ADS>\tools\python\python.exe`。
 - 在工具包根目录运行 `python -B -m adstk ...`，不要在 `adstk/` 子目录里运行。
 - ADS 根目录默认从当前 Python 路径推断，也可以设置 `ADS_PATH`，或在 spec 里写 `ads`。
@@ -22,8 +23,8 @@ cd /d <toolkit 根目录>
 | 位置 | 用途 |
 |---|---|
 | `adstk/` | 可执行内核：建模、审计、网表、仿真、PCE、文本 spec、布局 |
-| `tools/` | 从已有设计生成 spec 的辅助工具 |
-| `templates/` | 文本骨架、通用引脚表、布局计划骨架、最小设计配置 |
+| `tools/` | 从已有设计生成 spec；把多脚器件封装成带 symbol 的子电路 |
+| `templates/` | 文本骨架、通用引脚表、布局计划骨架、子电路端口配置、最小设计配置 |
 | `examples/specs/` | 不含论文数值的合成 demo（plan 与 v1） |
 | `tests/` | 单元测试和回归反例 |
 | `docs/` | 使用手册、布局计划、AI 提示词 |
@@ -153,6 +154,56 @@ spec 描述一个原理图：
 
 生成结果是完整 v1 文本，仍要跑 `build` dry、连接核对和参考网表比较。完整规则与限制见 `docs/LAYOUT_PLAN.md`。
 
+### 5.5 把多脚器件封装成子电路
+
+器件 + 封装寄生（例如肖特基二极管的三端封装模型）建议做成一个子电路 cell，母图只放一个 X 实例，不要在母图里摊平成 C/L/Diode。
+
+流程：
+
+1. 用普通 spec 建端口 cell，端口位置先放临时 `Term` 组件（`Num=1..N`），`build --apply` 保存。
+2. 复制 `templates/port_config.json`，填写：
+
+```json
+{
+  "workspace": "F:/work/my_wrk",
+  "cell": "my_lib:my_model",
+  "lead_len": 0.5,
+  "lead_spacing": 1.0,
+  "ports": [
+    {"name": "COM", "num": 1, "anchor": "L3.P1", "loc": [-1.0, 0.0], "angle": 180},
+    {"name": "A1",  "num": 2, "anchor": "L1.P1", "loc": [-1.0, 2.0], "angle": 90},
+    {"name": "K2",  "num": 3, "anchor": "L2.P2", "loc": [5.5, -1.0], "angle": 270}
+  ]
+}
+```
+
+- `anchor` 是该网络上的一个实例引脚（ADS 的名字，如 `L3.P1`），工具用它找网络。
+- `loc` 是端口 pin 的坐标，必须落在该网络连线的端点上。
+- `angle` 决定 symbol 引脚边：0=右、90=上、180=左、270=下。
+- `workspace` 可写绝对路径，或相对配置文件。
+
+3. 运行：
+
+```bat
+"<ADS>\tools\python\python.exe" tools/package_subcircuit.py my_model.json
+```
+
+工具会删除临时 `Term`、删除旧 term、添加 numbered hierarchical term/pin、重建 symbol，并打印“端口名 → symbol 引脚”映射。
+
+4. 母图里例化：
+
+```text
+X1 | my_lib | my_model | (x, y) | 0 |
+```
+
+并在 `[选项]` 的 `器件类型` 里加入 `my_model`，否则网表连接核对会把 X 实例当未知器件。
+
+注意：
+
+- 运行前关闭 ADS GUI 中对应 cell（包括母图），否则 `.cdslck` 会拦住。
+- 工具使用 ADS 自带 `keysight.ads.de.experimental.generate_symbol`，本机在 2024 Update 2 实测；symbol 为默认矩形，不可定制外形。
+- 参数扫描仍在展开后的网表上改子电路内部行；不要为了扫参重新摊平母图。
+
 ## 6. 固定中文文本与 AI 编写
 
 ### 6.1 格式
@@ -266,6 +317,8 @@ Pin_W = 10^(pwr_dBm/10) / 1000
 | TAHB 无法关闭 | 检查 HB 实例和 `TAHB_Enable` 参数 |
 | 无 PCE | 确认探针列名、`V_UP/V_DN` 配对、DC 点和功率轴 |
 | 数据集选错 | 用 `--varblock` 指定 |
+| `no net found for instance pin` | 端口配置的 `anchor` 写错；用 `readback` 查真实实例引脚名（常见 `L3.P1`/`L3.P2`，不是 `P__0`） |
+| 子电路 symbol 引脚和母图 X 对不上 | 看 `package_subcircuit.py` 打印的“端口名 → symbol 引脚”映射，再按映射改母图 X 的引脚名 |
 
 ## 11. 安全边界
 
@@ -273,4 +326,5 @@ Pin_W = 10^(pwr_dBm/10) / 1000
 - 没有 reference 时，不要仅凭“无 problems”判断电路原理正确。
 - AI 生成的 spec 必须先 dry，不要直接 apply。
 - 仿真和扫参会写输出目录，并在运行前清理目标 `.ds`。
+- `package_subcircuit.py` 会删除目标 cell 的临时 `Term`/旧 term 并重建 symbol；先在副本上验证。
 - 其他电脑、其他 ADS 版本、镜像方向、任意拓扑自动布线都未验证。

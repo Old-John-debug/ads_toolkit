@@ -41,6 +41,19 @@ def _boolean(text, line_no):
     _fail(line_no, "布尔值只能写 true 或 false")
 
 
+def _pin_refs(value, line_no):
+    refs = []
+    for item in value.split(","):
+        ref = item.strip()
+        if "." not in ref:
+            _fail(line_no, f"引脚引用应为 器件.引脚，得到 {ref!r}")
+        part, pin = (part.strip() for part in ref.split(".", 1))
+        if not part or not pin:
+            _fail(line_no, f"无效引脚引用 {ref!r}")
+        refs.append([part, pin])
+    return refs
+
+
 def parse(text):
     """Parse text spec v1. Errors include the source line number."""
     spec = {"design": {}, "libs": {}, "parts": [], "nets": {}, "wires": [],
@@ -129,18 +142,7 @@ def parse(text):
         elif section == "网络":
             if key in spec["nets"]:
                 _fail(line_no, f"网络 {key} 重复")
-            refs = []
-            for item in value.split(","):
-                ref = item.strip()
-                if "." not in ref:
-                    _fail(line_no, f"引脚引用应为 器件.引脚，得到 {ref!r}")
-                part, pin = (part.strip() for part in ref.split(".", 1))
-                if not part or not pin:
-                    _fail(line_no, f"无效引脚引用 {ref!r}")
-                refs.append([part, pin])
-            if not refs:
-                _fail(line_no, f"网络 {key} 没有引脚")
-            spec["nets"][key] = refs
+            spec["nets"][key] = _pin_refs(value, line_no)
             net_lines[key] = line_no
         elif section == "连线":
             points = [_point(item, line_no) for item in value.split("->")]

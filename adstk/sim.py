@@ -9,12 +9,36 @@ def sim_exe(ads):
     return os.path.join(ads, SIM_REL)
 
 
+def _sanitize_netlist(netlist_text):
+    """Drop optional post-processing directives that break headless runs.
+
+    ADS adds `#load "python","LinearCollapse"` and a `Component ...` line to
+    S-parameter netlists; when the embedded netlist Python cannot import that
+    module the whole run aborts even though the requested data does not depend
+    on it (observed on ADS 2024 Update 2).
+    """
+    out = []
+    for line in netlist_text.splitlines():
+        s = line.strip()
+        if s.startswith('#load "python","LinearCollapse"'):
+            continue
+        if s.startswith('Component Module="LinearCollapse"'):
+            continue
+        out.append(line)
+    return "\n".join(out) + "\n"
+
+
 def run_netlist(netlist_text, outdir, ads, name="nl.log", timeout=600):
     """Write the netlist into outdir and run hpeesofsim there.
 
     Returns (ok, ds_path_or_None, log_tail_str). The target dataset is removed
     before the run so a previous result can never be mistaken for a new one.
+    ADS-internal DLL directories are prepended to PATH so that hpeesofsim can
+    start on installations that keep helper DLLs outside <ADS>/bin.
     """
+    from . import core
+
+    netlist_text = _sanitize_netlist(netlist_text)
     top = _top_name(netlist_text)
     if not name or name in (".", "..") or "/" in name or "\\" in name or os.path.isabs(name):
         raise ValueError("netlist name must be a plain filename, not a path")
@@ -30,6 +54,10 @@ def run_netlist(netlist_text, outdir, ads, name="nl.log", timeout=600):
         if os.path.exists(path):
             os.remove(path)
     env = dict(os.environ, HPEESOF_DIR=ads, COMPL_DIR=ads)
+    extra = core.sim_path_dirs(ads)
+    if extra:
+        old = env.get("PATH")
+        env["PATH"] = os.pathsep.join(extra + ([old] if old else []))
     try:
         r = subprocess.run([sim_exe(ads), name], cwd=outdir, capture_output=True,
                            text=True, env=env, timeout=timeout)
@@ -66,11 +94,7 @@ def netlist_from_design(spec):
     core.setup_env(spec.get("ads"))
     import keysight.ads.de as de
     from keysight.ads.de.db import DesignMode
-    for lib, path in core.lib_paths(spec).items():
-        try:
-            de.Library.open(lib, path, de.LibraryMode.READ_ONLY)
-        except Exception:  # noqa: BLE001
-            pass
+    core.open_libraries(de, spec)
     ws = de.Workspace(spec["design"]["workspace"])
     ws.open()
     try:

@@ -3,6 +3,12 @@ import re
 from collections import Counter
 
 DEV_RE = re.compile(r"^([A-Za-z0-9_]+):([A-Za-z0-9_]+)\s*(.*)$")
+# ADS netlists model-based devices as `"MODEL":INST node node ...` (e.g. a
+# Diode bound to a Diode_Model). The leading quoted model name is not a device
+# type, so these lines need their own pattern or their nodes vanish from the
+# incidence map (breaking spec<->generated connectivity checks).
+MODEL_DEV_RE = re.compile(r'^"([^"]+)":([A-Za-z0-9_]+)\s*(.*)$')
+MODEL_DEV_TYPE = "ModelDevice"
 DEVTYPES = ("V_Probe", "Short", "Port", "TLIN", "R", "C", "L")
 CTRL_PREFIX = ("HB:", "ParamSweep:", "SweepPlan:")
 VAR_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=\S+$")
@@ -76,10 +82,14 @@ def parse_netlist(text, device_types=None):
         if line.startswith(CTRL_PREFIX) or VAR_RE.match(line):
             continue
         m = DEV_RE.match(line)
-        if not m or m.group(1) not in types:
-            opaque.append(line)
-            continue
-        dtype, dname, rest = m.groups()
+        if m and m.group(1) in types:
+            dtype, dname, rest = m.groups()
+        else:
+            q = MODEL_DEV_RE.match(line)
+            if not q:
+                opaque.append(line)
+                continue
+            dtype, dname, rest = MODEL_DEV_TYPE, q.group(2), q.group(3)
         if dname in devs:
             raise ValueError(f"duplicate device name in netlist: {dname}")
         toks = _split_tokens(rest)

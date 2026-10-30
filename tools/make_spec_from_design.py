@@ -59,11 +59,7 @@ def main():
     core.setup_env(spec.get("ads"))
     import keysight.ads.de as de
     from keysight.ads.de.db import DesignMode
-    for lib, path in core.lib_paths(spec).items():
-        try:
-            de.Library.open(lib, path, de.LibraryMode.READ_ONLY)
-        except Exception:  # noqa: BLE001
-            pass
+    core.open_libraries(de, spec)
     ws = de.Workspace(spec["design"]["workspace"])
     ws.open()
     try:

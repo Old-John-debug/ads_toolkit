@@ -29,6 +29,7 @@ https://github.com/Old-John-debug/ads_toolkit.git
 - docs/LAYOUT_PLAN.md
 - templates/circuit_skeleton.txt
 - templates/layout_plan_skeleton.txt
+- templates/port_config.json
 - templates/device_pin_table.json
 - examples/specs/demo_circuit.txt
 - examples/specs/demo_layout.plan.txt
@@ -44,10 +45,14 @@ https://github.com/Old-John-debug/ads_toolkit.git
 8. 项目专属器件不要写进工具包核心：用项目 `pin-table`、spec 的 `device_types`，以及文本/plan 的可选 `[库路径]`。多脚器件同一网络的额外引脚由布局器绕到符号外侧并接；移动实例不会带动已有连线，改布局请改 plan/spec 后重新生成。
 9. 不要把某篇论文的数值、结论或器件型号写进通用模板；这些应留在项目目录。
 10. 负载扫描必须用 `load-sweep`，让每个 RL 用自身阻值计算 PCE；不要用固定 `--rl` 的 `sweep` 扫负载。
+11. 多脚器件和封装模型优先封装成带 symbol 的子电路（`tools/package_subcircuit.py`），母图只放一个 X 实例；不要把封装网络摊平进母图。子电路 cell 名要加入 `[选项] 器件类型`。
 
 执行流程：
 阶段 0：需求核对。确认工作区、库、单元、目标频率、输入功率范围、负载 RL、器件库/单元、关键引脚角色、是否有参考网表。
 阶段 1：输出“假设清单 + 逻辑草案”。列出未确认项；不要急着写坐标。
+阶段 1.5：如器件带封装或多脚模型，先建端口 cell（临时 `Term`）并 `build --apply`，再用：
+  "<ADS>\tools\python\python.exe" tools/package_subcircuit.py <config.json>
+生成 symbol；母图里用 `X1 | 库 | 单元 | (x,y) | 0 |` 例化，不要摊平 C/L/Diode。
 阶段 2：优先使用简化布局计划。如果是“源 → 串联主链 → 输出节点”加对地支路、探针、控制器的拓扑，只写器件、网络和布局角色，运行：
   "<ADS>\tools\python\python.exe" -B -m adstk layout <plan.txt> <spec.txt>
 生成完整 v1；再检查生成的坐标和连线。复杂多主链或该布局器不支持的拓扑，才手写 v1 坐标和连线。
@@ -132,3 +137,4 @@ https://github.com/Old-John-debug/ads_toolkit.git
 - [ ] 有 reference 时，网表比较通过
 - [ ] 未执行 `--apply`，或已得到用户明确同意
 - [ ] PCE 来自实际数据集，若未仿真则明确写“未验证”
+- [ ] 多脚器件以子电路 + X 实例复用（如适用），母图未摊平封装网络，cell 名已加入 `器件类型`

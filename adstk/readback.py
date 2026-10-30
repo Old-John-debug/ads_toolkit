@@ -65,16 +65,6 @@ def segments_of(wires):
     return out
 
 
-def read_params(d, names):
-    """-> {name: {param: value}} for the given instance names (string params)."""
-    from .core import smap
-    out = {}
-    for nm in names:
-        inst = d.get_instance(nm)
-        out[nm] = {k: p.string_value for k, p in smap(inst).items()}
-    return out
-
-
 def completeness(d, netlist_text, device_types=None):
     """Floating-pin report from the netlist: nets touched by a single device pin."""
     from .netlistx import parse_netlist

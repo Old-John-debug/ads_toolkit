@@ -7,10 +7,23 @@ from . import audit, core
 
 ANGLES = (0, 90, 180, 270)
 GRID = 0.25
+# Global spacing scale. 1.5 gives the layout ~1.5x the original clearance
+# (branches 2.25 apart, first branch 1.25 from the node, probes/ground bus
+# 1.25 away, controller row 3.0 below the bus, controller columns 7.5 apart).
+SPREAD = 1.5
 
 
 def _q(value):
     return round(round(float(value) / GRID) * GRID, 6)
+
+
+BRANCH_OFFSET = _q(0.75 * SPREAD)
+BRANCH_PITCH = _q(1.5 * SPREAD)
+PROBE_DROP = _q(0.75 * SPREAD)
+BUS_DROP = _q(0.75 * SPREAD)
+CTRL_DY = _q(2.0 * SPREAD)
+CTRL_DX = _q(5.0 * SPREAD)
+SIDE_MARGIN = _q(0.5 * SPREAD)
 
 
 def default_pin_table():
@@ -180,7 +193,7 @@ def generate(spec, layout, pin_table):
                 continue
             route(net, P[(name, pin)], target)
 
-    def connect_extra_side(name, net, target, skip=(), side="left", margin=0.5):
+    def connect_extra_side(name, net, target, skip=(), side="left", margin=SIDE_MARGIN):
         """Tie extra pins outside the symbol so the parallel connection is visible."""
         outside_x = target[0] - margin if side == "left" else target[0] + margin
         for pin in pin_nets[name]:
@@ -276,7 +289,7 @@ def generate(spec, layout, pin_table):
     def place_probe(name, net, x):
         pin = next(iter(pins_of(name)))
         offset = pins_of(name)[pin]
-        target = (x, -0.75)
+        target = (x, -PROBE_DROP)
         put(name, 0, (target[0] - offset[0], target[1] - offset[1]))
         route(net, (x, 0.0), target)
 
@@ -285,8 +298,8 @@ def generate(spec, layout, pin_table):
         node = nodes[index]
         node_branches = branches.get(node, [])
         if node_branches:
-            xs = [_q(cursor + 0.75 + i * 1.5) for i in range(len(node_branches))]
-            node_end = _q(xs[-1] + 0.75)
+            xs = [_q(cursor + BRANCH_OFFSET + i * BRANCH_PITCH) for i in range(len(node_branches))]
+            node_end = _q(xs[-1] + BRANCH_OFFSET)
         else:
             xs = []
             node_end = _q(cursor + 0.75)
@@ -301,7 +314,7 @@ def generate(spec, layout, pin_table):
     last_node = nodes[-1]
     last_branches = branches.get(last_node, [])
     if last_branches:
-        xs = [_q(cursor + 0.75 + i * 1.5) for i in range(len(last_branches))]
+        xs = [_q(cursor + BRANCH_OFFSET + i * BRANCH_PITCH) for i in range(len(last_branches))]
         node_end = xs[-1]
         add_wire(last_node, [(cursor, 0.0), (node_end, 0.0)])
         for (kind, name), x in zip(last_branches, xs):
@@ -312,7 +325,7 @@ def generate(spec, layout, pin_table):
 
     if not ground_points:
         raise ValueError("no ground pin coordinates were generated")
-    bus_y = _q(min(point[1] for point in ground_points) - 0.75)
+    bus_y = _q(min(point[1] for point in ground_points) - BUS_DROP)
     device_left = min(point[0] for point in ground_points)
     device_right = max(point[0] for point in ground_points)
     count = len(ground_parts)
@@ -331,9 +344,9 @@ def generate(spec, layout, pin_table):
         route(ground_net, point, (point[0], bus_y))
     add_wire(ground_net, [(bus_left, bus_y), (bus_right, bus_y)])
 
-    controller_y = _q(bus_y - 2.0)
+    controller_y = _q(bus_y - CTRL_DY)
     for index, name in enumerate(layout["控制器"]):
-        put(name, 0, (index * 5.0, controller_y))
+        put(name, 0, (index * CTRL_DX, controller_y))
 
     for part in spec["parts"]:
         for pin in pins_of(part["name"]):

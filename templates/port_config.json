@@ -1,0 +1,10 @@
+{
+  "workspace": "F:/work/my_wrk",
+  "cell": "my_lib:my_model",
+  "lead_len": 0.5,
+  "lead_spacing": 1.0,
+  "ports": [
+    {"name": "P1", "num": 1, "anchor": "R1.P1", "loc": [-1.0, 0.0], "angle": 180},
+    {"name": "P2", "num": 2, "anchor": "R2.P1", "loc": [3.0, 0.0], "angle": 0}
+  ]
+}

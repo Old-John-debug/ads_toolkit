@@ -122,8 +122,8 @@ class LayoutPlanTests(unittest.TestCase):
         input_wires = [w for w in generated["wires"] if w["net"] == "in"]
         output_wires = [w for w in generated["wires"] if w["net"] == "out"]
         diode_origin = next(p["origin"] for p in generated["parts"] if p["name"] == "D1")
-        input_outside = diode_origin[0] - 0.5
-        output_outside = diode_origin[0] + 1.5
+        input_outside = diode_origin[0] - layout.SIDE_MARGIN
+        output_outside = diode_origin[0] + 1.0 + layout.SIDE_MARGIN
         self.assertTrue(any(input_outside in [p[0] for p in w["points"]] for w in input_wires))
         self.assertTrue(any(output_outside in [p[0] for p in w["points"]] for w in output_wires))
 
@@ -176,6 +176,28 @@ class NetlistTests(unittest.TestCase):
         old = BASE_NETLIST + "MLIN:ML1 N__1 N__2 W=1 mm L=2 mm\n"
         new = BASE_NETLIST + "MLIN:ML1 N__1 N__2 W=1 mm L=3 mm\n"
         self.assertFalse(netlistx.equivalent(old, new, log=lambda *a: None))
+
+    def test_model_bound_device_nodes_are_parsed(self):
+        # ADS writes model-based devices as `"MODEL":INST node node ...`
+        # (Diode bound to a Diode_Model); their nodes must stay in the
+        # incidence map or spec<->generated connectivity checks sees them
+        # as dangling single-pin parts.
+        net = BASE_NETLIST + ('"DIODEM1":X1 N__1 N__2 Mode=1 Noise=yes\n'
+                              "model DIODEM1 Diode Is=50 nA Cjo=0.18 pF\n")
+        devs, inc, opaque = netlistx.parse_netlist(net)
+        self.assertEqual(devs["X1"][0], netlistx.MODEL_DEV_TYPE)
+        self.assertEqual(devs["X1"][1], ["N__1", "N__2"])
+        self.assertIn(("X1", 0), inc["N__1"])
+        self.assertIn(("X1", 1), inc["N__2"])
+        self.assertFalse(any(line.startswith('"DIODEM1":') for line in opaque))
+
+    def test_model_bound_device_node_rename_is_equivalent(self):
+        base = '; Top Design: "L:c:s"\n'
+        old = base + ('R:R1 N__1 0 R=1 Ohm\nR:R2 N__2 0 R=1 Ohm\n'
+                      '"DIODEM1":X1 N__1 N__2 Mode=1\n')
+        new = base + ('R:R1 N__5 0 R=1 Ohm\nR:R2 N__6 0 R=1 Ohm\n'
+                      '"DIODEM1":X1 N__5 N__6 Mode=1\n')
+        self.assertTrue(netlistx.equivalent(old, new, log=lambda *a: None))
 
 
 class NetlistEdgeTests(unittest.TestCase):

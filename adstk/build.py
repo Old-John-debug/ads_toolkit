@@ -6,13 +6,6 @@ from . import core
 from . import audit as auditmod
 
 
-def _resolve_path(value, base):
-    value = os.path.expandvars(os.path.expanduser(str(value)))
-    if os.path.isabs(value):
-        return os.path.normpath(value)
-    return os.path.normpath(os.path.join(base, value))
-
-
 def _read_spec_file(path):
     with open(path, encoding="utf-8") as fh:
         if path.lower().endswith(".json"):
@@ -26,12 +19,12 @@ def _resolve_design_paths(spec, path):
         if key not in spec["design"]:
             raise ValueError(f"spec.design missing required key '{key}'")
     base = os.path.dirname(path)
-    spec["design"]["workspace"] = _resolve_path(spec["design"]["workspace"], base)
+    spec["design"]["workspace"] = core.resolve_path(spec["design"]["workspace"], base)
     if spec.get("ads"):
-        spec["ads"] = _resolve_path(spec["ads"], base)
+        spec["ads"] = core.resolve_path(spec["ads"], base)
     for lib, libpath in spec.get("libs", {}).items():
         if libpath:
-            spec["libs"][lib] = _resolve_path(libpath, base)
+            spec["libs"][lib] = core.resolve_path(libpath, base)
     return spec
 
 
@@ -120,7 +113,9 @@ def _params(d, spec):
     for p in spec["parts"]:
         if not p["params"]:
             continue
-        m = core.smap(d.get_instance(p["name"]))
+        inst = d.get_instance(p["name"])
+        m = core.smap(inst)
+        rep = core.repeated_params(inst)
         for pname, pval in p["params"].items():
             if not pname or not str(pval).strip():
                 continue
@@ -129,6 +124,14 @@ def _params(d, spec):
                 pval = f'"{pval}"'
             if pname in m:
                 m[pname].string_value = pval
+            elif pname in rep:
+                # ADS 2024 repeated parameters (e.g. ParamSweep.SimInstanceName):
+                # no plain string_value; fill the first repeat slot.
+                rp = rep[pname]
+                if rp.number_of_repeats > 0:
+                    rp.get_repeat(0).string_value = pval
+                else:
+                    problems.append(f"param {p['name']}.{pname} is a repeated parameter with no slots")
             else:
                 problems.append(f"param {p['name']}.{pname} not found")
     var_candidates = [p["name"] for p in spec["parts"] if p["cell"] == "VAR"]
@@ -194,17 +197,14 @@ def build(spec, dry=True, reference=None, verbose=True):
 
     design = spec["design"]
     core.assert_no_lock(design["workspace"], design["library"], design["cell"])
-    for lib, path in core.lib_paths(spec).items():
-        try:
-            de.Library.open(lib, path, de.LibraryMode.READ_ONLY)
-        except Exception as e:  # noqa: BLE001
-            if verbose:
-                print("  lib open note:", lib, repr(e))
+    on_error = (lambda name, e: print("  lib open note:", name, repr(e))) if verbose else None
+    core.open_libraries(de, spec, on_error=on_error)
 
     ws = de.Workspace(design["workspace"])
     ws.open()
     result = {"ok": False, "saved": False, "netlist": None, "problems": [], "notes": []}
     try:
+        # APPEND only - WRITE returns an empty design and saving it wipes the schematic.
         d = ws.design((design["library"], design["cell"], "schematic"), DesignMode.APPEND)
         pin_indices = {}
         with Transaction(d, "adstk pin discovery") as tx:

@@ -1,20 +1,12 @@
 """Simplified layout-plan text parser. Produces spec data without geometry."""
 import os
 
-from .textspec import _assignment, _boolean
+from .core import resolve_path
+from .textspec import DESIGN_KEYS, OPTION_KEYS, _assignment, _boolean, _pin_refs
 
 SECTIONS = ("工程", "库路径", "变量", "器件", "网络", "布局", "选项")
 REQUIRED_SECTIONS = ("工程", "器件", "网络", "布局")
 LAYOUT_KEYS = ("主链", "对地", "探针", "控制器", "地网络")
-DESIGN_KEYS = {"工作区": "workspace", "库": "library", "单元": "cell"}
-OPTION_KEYS = {"tahb_off", "var_part", "varblock", "power_axis", "器件类型"}
-
-
-def _resolve_path(value, base):
-    value = os.path.expandvars(os.path.expanduser(str(value)))
-    if os.path.isabs(value):
-        return os.path.normpath(value)
-    return os.path.normpath(os.path.join(base, value))
 
 
 def _names(value, line_no):
@@ -94,16 +86,7 @@ def parse(text, base_dir=None):
         elif section == "变量":
             spec["vars"][key] = value
         elif section == "网络":
-            refs = []
-            for item in value.split(","):
-                ref = item.strip()
-                if "." not in ref:
-                    raise ValueError(f"第 {line_no} 行: 引脚引用应为 器件.引脚，得到 {ref!r}")
-                part, pin = (x.strip() for x in ref.split(".", 1))
-                if not part or not pin:
-                    raise ValueError(f"第 {line_no} 行: 无效引脚引用 {ref!r}")
-                refs.append([part, pin])
-            spec["nets"][key] = refs
+            spec["nets"][key] = _pin_refs(value, line_no)
             net_lines[key] = line_no
         elif section == "布局":
             if key not in LAYOUT_KEYS:
@@ -152,9 +135,9 @@ def parse(text, base_dir=None):
             raise ValueError(f"第 {option_lines['var_part']} 行: var_part 不是 VAR 实例")
 
     base = os.path.abspath(base_dir or os.getcwd())
-    spec["design"]["workspace"] = _resolve_path(spec["design"]["workspace"], base)
+    spec["design"]["workspace"] = resolve_path(spec["design"]["workspace"], base)
     if spec.get("ads"):
-        spec["ads"] = _resolve_path(spec["ads"], base)
+        spec["ads"] = resolve_path(spec["ads"], base)
     for name, path in spec["libs"].items():
-        spec["libs"][name] = _resolve_path(path, base)
+        spec["libs"][name] = resolve_path(path, base)
     return spec, layout
