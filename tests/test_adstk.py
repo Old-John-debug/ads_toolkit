@@ -80,6 +80,16 @@ class LayoutPlanTests(unittest.TestCase):
         self.assertEqual(len(reparsed["parts"]), 10)
         self.assertEqual(len(reparsed["wires"]), 8)
 
+    def test_layout_spacing_is_scaled(self):
+        spec, problems, _ = self._generate()
+        self.assertEqual(problems, [])
+        origins = {part["name"]: part["origin"] for part in spec["parts"]}
+        # two shunt branches on the same node: 2.5 x the old 1.5 pitch
+        self.assertAlmostEqual(origins["R2"][0] - origins["C1"][0], 3.75)
+        # probe drops 2.5 x the old 0.75
+        self.assertAlmostEqual(origins["V_IN"][1], -2.0)
+        self.assertAlmostEqual(layout.SIDE_MARGIN, 1.25)
+
     def test_layout_cli_writes_v1(self):
         with tempfile.TemporaryDirectory() as tmp:
             output = os.path.join(tmp, "demo_layout.txt")

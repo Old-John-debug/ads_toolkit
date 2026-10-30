@@ -52,13 +52,13 @@
   单脚网络。
 - **改法**：新增 `MODEL_DEV_RE`，把 `"model":inst node node ...` 解析成 `ModelDevice` 并纳入 incidence；
   器件名仍取实例名，节点顺序保持不变。补 2 项单元测试。
-- **验证**：含两个封装二极管的整流器 spec → `build` dry 的 spec↔生成网表连接核对通过；71/71 测试通过。
+- **验证**：含两个封装二极管的整流器 spec → `build` dry 的 spec↔生成网表连接核对通过；72/72 测试通过。
 
 ## 回归
 
 ```bat
 "D:\Program Files\Keysight\ADS2024_Update2\tools\python\python.exe" -B -m unittest discover -s tests
-:: Ran 71 tests ... OK
+:: Ran 72 tests ... OK
 ```
 
 另有端到端实测：paper2 三个单元（`PA_HarmNet`/`Coupler`/`SIR_ideal`）build dry、apply、readback、

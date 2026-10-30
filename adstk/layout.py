@@ -7,23 +7,24 @@ from . import audit, core
 
 ANGLES = (0, 90, 180, 270)
 GRID = 0.25
-# Global spacing scale. 1.5 gives the layout ~1.5x the original clearance
-# (branches 2.25 apart, first branch 1.25 from the node, probes/ground bus
-# 1.25 away, controller row 3.0 below the bus, controller columns 7.5 apart).
-SPREAD = 1.5
+# Global spacing scale. 2.5 gives the layout ~2.5x the original clearance
+# (branches 3.75 apart, first branch 2.0 from the node, probes/ground bus
+# 2.0 away, controller row 5.0 below the bus, controller columns 12.5 apart).
+SPREAD = 2.5
 
 
 def _q(value):
     return round(round(float(value) / GRID) * GRID, 6)
 
 
-BRANCH_OFFSET = _q(0.75 * SPREAD)
-BRANCH_PITCH = _q(1.5 * SPREAD)
-PROBE_DROP = _q(0.75 * SPREAD)
-BUS_DROP = _q(0.75 * SPREAD)
-CTRL_DY = _q(2.0 * SPREAD)
-CTRL_DX = _q(5.0 * SPREAD)
-SIDE_MARGIN = _q(0.5 * SPREAD)
+# Nearest 0.25-grid values to 2.5x the old clearances (0.75/1.5/2.0/5.0).
+BRANCH_OFFSET = 2.0
+BRANCH_PITCH = 3.75
+PROBE_DROP = 2.0
+BUS_DROP = 2.0
+CTRL_DY = 5.0
+CTRL_DX = 12.5
+SIDE_MARGIN = 1.25
 
 
 def default_pin_table():
@@ -302,7 +303,7 @@ def generate(spec, layout, pin_table):
             node_end = _q(xs[-1] + BRANCH_OFFSET)
         else:
             xs = []
-            node_end = _q(cursor + 0.75)
+            node_end = _q(cursor + BRANCH_OFFSET)
         add_wire(node, [(cursor, 0.0), (node_end, 0.0)])
         for (kind, name), x in zip(node_branches, xs):
             if kind == "shunt":
